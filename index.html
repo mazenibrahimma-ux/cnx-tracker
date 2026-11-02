@@ -1,257 +1,748 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CNX Alexandria Shift Tracker - Automated Engine</title>
+    <title>CNX Alexandria - Live Shift & Income Visualizer</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'Fira Code', 'monospace'] } } }
+        }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0b0f17; color: #f3f4f6; }
-        .glow-emerald { text-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
-        .glow-box { box-shadow: 0 0 25px rgba(16, 185, 129, 0.15); }
+        body { font-family: 'Inter', sans-serif; background-color: #0b0f19; color: #f3f4f6; }
+        .glow-text { text-shadow: 0 0 20px rgba(16,185,129,.45), 0 0 40px rgba(16,185,129,.2); }
+        .glow-box { box-shadow: 0 0 30px -5px rgba(16,185,129,.15); }
+        .tab-active { color: #06b6d4; border-color: #0891b2; background-color: rgba(6,182,212,.1); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #111827; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col antialiased">
+<body class="min-h-screen flex flex-col justify-between selection:bg-cyan-500 selection:text-black">
 
-    <!-- Top Navigation Header -->
-    <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-xl text-emerald-400">
-                    <i class="ph ph-shield-check text-xl"></i>
-                </div>
-                <div>
-                    <h1 class="font-bold text-base tracking-tight flex items-center gap-2">
-                        Shift Tracker 
-                        <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">AUTO MODE</span>
-                    </h1>
-                    <p class="text-xs text-slate-400">Concentrix Walmart Alex • Fully Automated</p>
-                </div>
+    <header class="border-b border-gray-800 bg-gray-900/90 backdrop-blur-md sticky top-0 z-40 px-4 py-3 sm:px-8 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-emerald-400 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-cyan-500/20">CNX</div>
+            <div>
+                <h1 class="text-base font-bold tracking-wide text-white flex items-center gap-2">
+                    Shift Visualizer <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800">WALMART ALEX</span>
+                </h1>
+                <p class="text-xs text-gray-400">Concentrix Alexandria Precision Earnings Tracker</p>
             </div>
+        </div>
 
-            <div class="flex items-center space-x-2">
-                <button onclick="requestNotificationPermission()" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-2 rounded-lg border border-slate-700 flex items-center gap-1.5 transition">
-                    <i class="ph ph-bell text-sm text-emerald-400"></i> Enable Notifications
-                </button>
-            </div>
+        <div class="flex items-center space-x-2 text-xs">
+            <button onclick="openSyncModal()" id="cloudBadgeBtn" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 font-medium transition cursor-pointer">
+                <span id="syncStatusDot" class="inline-flex rounded-full h-2 w-2 bg-gray-500"></span>
+                <i class="ph-bold ph-arrows-clockwise text-cyan-400"></i>
+                <span id="syncBadgeText" class="font-mono font-bold">Key: ...</span>
+            </button>
+            <button onclick="openInstallModal()" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 font-medium text-xs transition cursor-pointer">
+                <i class="ph-bold ph-device-mobile text-emerald-400"></i><span>App</span>
+            </button>
         </div>
     </header>
 
-    <!-- Main Workspace -->
-    <main class="max-w-6xl mx-auto px-4 py-6 flex-1 w-full space-y-6">
-
-        <!-- Live Night Shift Status Bar -->
-        <div id="nightShiftBanner" class="hidden bg-indigo-950/60 border border-indigo-500/30 rounded-2xl p-4 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="bg-indigo-500/20 p-2.5 rounded-xl text-indigo-400">
-                    <i class="ph ph-moon-stars text-xl"></i>
-                </div>
-                <div>
-                    <h2 class="text-sm font-semibold text-indigo-200">Night Differential Active (+6.85 EGP/hr)</h2>
-                    <p class="text-xs text-indigo-300/80">Local device clock is inside the 00:00 - 07:00 graveyard window.</p>
-                </div>
-            </div>
-            <span class="text-xs font-mono bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full border border-indigo-500/30">LIVE BOOST</span>
+    <div class="bg-gray-900 border-b border-gray-800 px-4 py-2 sticky top-[65px] z-30">
+        <div class="max-w-4xl mx-auto flex items-center justify-center gap-2 sm:gap-4 text-xs font-semibold">
+            <button onclick="switchTab('live')" id="tab-btn-live" class="tab-btn tab-active flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition cursor-pointer">
+                <i class="ph-bold ph-lightning text-base"></i><span>Live Shift</span>
+            </button>
+            <button onclick="switchTab('calendar')" id="tab-btn-calendar" class="tab-btn text-gray-400 hover:text-white flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition cursor-pointer">
+                <i class="ph-bold ph-calendar text-base"></i><span>Calendar</span>
+            </button>
+            <button onclick="switchTab('settings')" id="tab-btn-settings" class="tab-btn text-gray-400 hover:text-white flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition cursor-pointer">
+                <i class="ph-bold ph-sliders text-base"></i><span>Pay & Log</span>
+            </button>
         </div>
+    </div>
 
-        <!-- Live Earnings Card -->
-        <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 glow-box relative overflow-hidden">
-            <div class="flex justify-between items-start mb-4">
-                <div>
-                    <span class="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></i> Live Shift Earnings
-                    </span>
-                    <div id="shiftStateLabel" class="text-xs text-slate-400 mt-1">Status: Clocked Out (Auto-scheduler ready)</div>
-                </div>
-                <div id="liveTimerBadge" class="text-xs font-mono bg-slate-800 text-slate-300 px-3 py-1 rounded-full border border-slate-700">
-                    00:00:00
-                </div>
-            </div>
+    <main class="max-w-4xl mx-auto px-4 py-6 sm:px-6 space-y-6 flex-grow w-full">
 
-            <div class="my-6">
-                <div id="liveEarningsDisplay" class="text-5xl font-extrabold font-mono tracking-tight text-white glow-emerald">
-                    0.0000 <span class="text-lg font-normal text-emerald-400">EGP</span>
-                </div>
-                <p id="netTakeHomeDisplay" class="text-xs text-slate-400 mt-2">Estimated Net Take-Home (~15% tax): 0.00 EGP</p>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-slate-800">
-                <button onclick="manualToggleClock()" id="mainClockBtn" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-500/2k">
-                    <i class="ph ph-play-circle text-lg"></i> <span id="clockBtnText">Start Shift Now</span>
-                </button>
-                <button onclick="triggerManualBreak()" id="breakBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition border border-slate-700">
-                    <i class="ph ph-coffee text-lg"></i> <span id="breakBtnText">Take Lunch (45m)</span>
-                </button>
-                <button onclick="resetCurrentShift()" class="bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition border border-slate-800">
-                    <i class="ph ph-arrow-counter-clockwise text-lg"></i> Reset
-                </button>
-            </div>
-        </div>
-
-        <!-- Automation Rules Settings -->
-        <div class="bg-slate-900/60 border border-slate-800 rounded-3xl p-6">
-            <h3 class="text-sm font-bold text-slate-200 mb-4 flex items-center gap-2">
-                <i class="ph ph-cpu text-emerald-400"></i> Automation & Schedule Settings
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                <div class="bg-slate-800/40 border border-slate-800 p-4 rounded-2xl flex items-center justify-between">
+        <!-- LIVE -->
+        <div id="tab-content-live" class="tab-content space-y-6">
+            <div class="grid grid-cols-1 gap-4">
+                <div class="bg-gray-900/90 border border-emerald-900/40 rounded-3xl p-6 glow-box relative overflow-hidden flex flex-col justify-between">
+                    <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
                     <div>
-                        <div class="font-semibold text-slate-200">Automatic Break Sequencing</div>
-                        <div class="text-slate-400 mt-0.5">Automatically trigger 45m lunch halfway through shift.</div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                                <span class="relative flex h-2 w-2">
+                                    <span id="pulseDot" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 hidden"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </span>
+                                Real-Time Earnings Accumulation
+                            </span>
+                            <span id="shiftStatusBadge" class="text-xs font-semibold px-3 py-1 rounded-full bg-gray-800 text-gray-400 border border-gray-700">Clocked Out</span>
+                        </div>
+                        <div class="my-4">
+                            <div class="flex items-baseline gap-2 flex-wrap">
+                                <span id="liveCounter" class="text-4xl sm:text-6xl font-extrabold font-mono text-emerald-400 glow-text tracking-tight">0.0000</span>
+                                <span class="text-xl font-bold text-emerald-500 font-mono">EGP</span>
+                            </div>
+                            <div class="flex items-center gap-4 mt-2 text-xs text-gray-400">
+                                <span>Estimated Net Take-Home (~15% tax): <strong id="netEarningsDisplay" class="text-cyan-400 font-mono">0.00 EGP</strong></span>
+                            </div>
+                        </div>
                     </div>
-                    <input type="checkbox" id="autoBreakToggle" checked class="w-4 h-4 accent-emerald-500 rounded cursor-pointer">
+
+                    <div class="flex flex-wrap gap-3 pt-4 border-t border-gray-800/80">
+                        <button id="clockBtn" onclick="toggleClock()" class="flex-1 min-w-[140px] py-3.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-950 font-bold text-sm transition flex items-center justify-center gap-2 cursor-pointer"></button>
+                        <button id="breakBtn" onclick="toggleLunch()" disabled class="py-3.5 px-5 rounded-2xl bg-gray-800 text-gray-400 font-bold text-sm transition border border-gray-700 opacity-50 cursor-not-allowed flex items-center justify-center gap-2">
+                            <i class="ph-bold ph-coffee"></i><span id="breakBtnLabel">Take Lunch (45m, unpaid)</span>
+                        </button>
+                        <button id="shortBreakBtn" onclick="toggleShortBreak()" disabled class="py-3.5 px-4 rounded-2xl bg-gray-800 text-gray-400 font-bold text-sm transition border border-gray-700 opacity-50 cursor-not-allowed flex items-center justify-center gap-2">
+                            <i class="ph-bold ph-timer"></i><span id="shortBreakLabel">Break (15m, paid)</span>
+                        </button>
+                        <button onclick="resetShift()" title="Discard current shift" class="py-3.5 px-4 rounded-2xl bg-gray-800/60 hover:bg-red-950/60 hover:text-red-400 text-gray-400 font-semibold text-sm transition border border-gray-800 flex items-center justify-center cursor-pointer">
+                            <i class="ph-bold ph-arrow-counter-clockwise text-base"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="bg-slate-800/40 border border-slate-800 p-4 rounded-2xl flex items-center justify-between">
-                    <div>
-                        <div class="font-semibold text-slate-200">Real-Time Night Differential (+6.85 EGP/h)</div>
-                        <div class="text-slate-400 mt-0.5">Automatically compound rate between 00:00 & 07:00.</div>
+
+                <div class="bg-gray-900/90 border border-gray-800 rounded-3xl p-6 flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+                                <i class="ph-bold ph-clock text-base"></i> Shift Progression & Allowances
+                            </h3>
+                            <div id="nightStatusBadge" class="hidden items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 text-[10px] font-semibold animate-pulse">
+                                <i class="ph-bold ph-moon-stars text-indigo-400"></i>
+                                <span id="nightBadgeText">Night Differential Active</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold mb-1">
+                                <span class="text-gray-400">Active Paid Time</span>
+                                <span id="workedTimeDisplay" class="font-mono text-cyan-300">00:00:00</span>
+                            </div>
+                            <div class="w-full bg-gray-800 h-2.5 rounded-full overflow-hidden">
+                                <div id="shiftProgressBar" class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full w-0 transition-all duration-500"></div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3 pt-2 text-center">
+                            <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800/80">
+                                <span class="text-[10px] uppercase font-bold text-gray-500 block">Hourly Base</span>
+                                <span id="ratePerHour" class="text-xs font-bold text-white font-mono">-</span>
+                            </div>
+                            <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800/80">
+                                <span class="text-[10px] uppercase font-bold text-gray-500 block">Per Minute</span>
+                                <span id="ratePerMinute" class="text-xs font-bold text-emerald-400 font-mono">-</span>
+                            </div>
+                            <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800/80">
+                                <span class="text-[10px] uppercase font-bold text-gray-500 block">Night Rate</span>
+                                <span id="rateNight" class="text-xs font-bold text-indigo-400 font-mono">-</span>
+                            </div>
+                        </div>
                     </div>
-                    <input type="checkbox" id="autoNightToggle" checked class="w-4 h-4 accent-emerald-500 rounded cursor-pointer">
+                    <div class="mt-4 pt-3 border-t border-gray-800/80 flex items-center justify-between text-xs text-gray-400">
+                        <span>Shift Target (8.25 Paid Hours):</span>
+                        <span id="shiftGoalText" class="font-bold font-mono text-white">-</span>
+                    </div>
                 </div>
             </div>
         </div>
 
+        <!-- CALENDAR -->
+        <div id="tab-content-calendar" class="tab-content hidden space-y-6">
+            <div class="bg-gray-900/90 border border-gray-800 rounded-3xl p-6 space-y-4">
+                <div class="flex justify-between items-center flex-wrap gap-2 border-b border-gray-800 pb-4">
+                    <div>
+                        <h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+                            <i class="ph-bold ph-calendar text-lg"></i> Concentrix Monthly Shift Calendar
+                        </h2>
+                        <p class="text-xs text-gray-400 mt-0.5">Completed shifts and pay period totals</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="changeMonth(-1)" class="p-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 transition cursor-pointer"><i class="ph-bold ph-caret-left"></i></button>
+                        <span id="calendarMonthLabel" class="text-sm font-bold text-white font-mono min-w-[130px] text-center"></span>
+                        <button onclick="changeMonth(1)" class="p-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 transition cursor-pointer"><i class="ph-bold ph-caret-right"></i></button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center">
+                        <span class="text-[10px] uppercase font-bold text-gray-500 block">Days Worked</span>
+                        <span id="calStatShifts" class="text-base font-bold text-white font-mono">0</span>
+                    </div>
+                    <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center">
+                        <span class="text-[10px] uppercase font-bold text-gray-500 block">Month Gross Pay</span>
+                        <span id="calStatGross" class="text-base font-bold text-emerald-400 font-mono">0.00 EGP</span>
+                    </div>
+                    <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center">
+                        <span class="text-[10px] uppercase font-bold text-gray-500 block">Month Net (~15%)</span>
+                        <span id="calStatNet" class="text-base font-bold text-cyan-400 font-mono">0.00 EGP</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-7 gap-1.5 text-center text-xs">
+                    <div class="text-gray-500 font-bold py-1">Mon</div><div class="text-gray-500 font-bold py-1">Tue</div>
+                    <div class="text-gray-500 font-bold py-1">Wed</div><div class="text-gray-500 font-bold py-1">Thu</div>
+                    <div class="text-gray-500 font-bold py-1">Fri</div>
+                    <div class="font-bold py-1 text-cyan-400">Sat</div><div class="font-bold py-1 text-cyan-400">Sun</div>
+                </div>
+                <div id="calendarDaysGrid" class="grid grid-cols-7 gap-1.5"></div>
+            </div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div id="tab-content-settings" class="tab-content hidden space-y-6">
+            <div class="bg-gray-900/90 border border-gray-800 rounded-3xl p-6 space-y-4">
+                <div class="flex justify-between items-center border-b border-gray-800 pb-3 flex-wrap gap-2">
+                    <div>
+                        <h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+                            <i class="ph-bold ph-sliders text-lg"></i> Salary & Allowance Settings
+                        </h2>
+                        <p class="text-xs text-gray-400 mt-0.5">Walmart Alexandria Offer Breakdown</p>
+                    </div>
+                    <button onclick="toggleProbationMode()" id="probationToggleBtn" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                        <i class="ph-bold ph-shield-check text-base"></i><span id="probationStatusText"></span>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                    <div class="space-y-1.5">
+                        <label class="font-semibold text-gray-300 block">Monthly Base Package</label>
+                        <select id="packageSelect" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-cyan-500 font-mono">
+                            <option value="15625">15,625 EGP (Basic + Language + COLA)</option>
+                            <option value="11950">11,950 EGP (Basic + Language Only)</option>
+                            <option value="9450">9,450 EGP (Basic Salary Only)</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="font-semibold text-gray-300 block">Monthly KPI Bonus (Max 3,250 EGP)</label>
+                        <div class="flex items-center gap-2">
+                            <input type="range" id="kpiSlider" min="0" max="100" value="0" oninput="recalculateRates()" class="w-full accent-cyan-400">
+                            <span id="kpiValueText" class="font-mono text-cyan-400 font-bold min-w-[36px]">0%</span>
+                        </div>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="font-semibold text-gray-300 block">Night Allowance (EGP/h, 00:00-07:00)</label>
+                        <input type="number" id="nightAllowanceInput" value="6.85" step="0.05" min="0" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-900/90 border border-gray-800 rounded-3xl p-6 space-y-4">
+                <div class="flex justify-between items-center flex-wrap gap-2">
+                    <div>
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                            <i class="ph-bold ph-clock-counter-clockwise text-lg"></i> Completed Shift History Log
+                        </h3>
+                        <p class="text-xs text-gray-400">Recorded work shifts and accumulated pay</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="exportCSV()" class="text-xs text-cyan-300 font-semibold px-3 py-1.5 rounded-lg bg-cyan-950 border border-cyan-800 transition cursor-pointer">Export CSV</button>
+                        <button onclick="clearHistory()" class="text-xs text-red-400 font-semibold px-3 py-1.5 rounded-lg bg-red-950/40 border border-red-900/60 transition cursor-pointer">Clear</button>
+                    </div>
+                </div>
+                <div id="historyList" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+            </div>
+        </div>
     </main>
 
-    <footer class="text-center py-6 text-xs text-slate-500 border-t border-slate-800/60 mt-auto">
-        Concentrix Alexandria Precision Shift Visualizer &bull; Automated Core Engine
-    </footer>
+    <!-- SYNC MODAL -->
+    <div id="syncModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-gray-900 border border-cyan-800 rounded-3xl max-w-md w-full p-6 space-y-4 relative">
+            <button onclick="closeSyncModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl cursor-pointer"><i class="ph-bold ph-x"></i></button>
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-cyan-950 border border-cyan-800 text-cyan-400 flex items-center justify-center text-xl"><i class="ph-bold ph-cloud-arrow-up"></i></div>
+                <div>
+                    <h3 class="font-bold text-white text-base">Real-Time Cloud Synchronization</h3>
+                    <p class="text-xs text-gray-400">Pair work PC & phone using one shared Sync Key</p>
+                </div>
+            </div>
+            <div class="bg-gray-950 p-4 rounded-2xl border border-gray-800 space-y-3 text-xs">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400">Cloud Status:</span>
+                    <span id="modalCloudStatus" class="font-bold text-gray-400">Connecting...</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400">Active Sync Key:</span>
+                    <span id="modalActiveKeyDisplay" class="font-mono text-cyan-300 font-bold text-xs"></span>
+                </div>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs font-semibold text-gray-300 block mb-1">Enter the Sync Key from your other device:</label>
+                    <div class="flex items-center gap-2">
+                        <input id="syncKeyInputField" type="text" placeholder="CNX-XXXXXXXX" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-cyan-500 uppercase">
+                        <button onclick="applySyncKey()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-black font-bold text-xs rounded-xl transition cursor-pointer">Connect</button>
+                    </div>
+                </div>
+                <div class="pt-2 border-t border-gray-800 flex gap-2">
+                    <button onclick="copySyncKey()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs transition cursor-pointer">Copy Key</button>
+                    <button onclick="generateNewKey()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-cyan-400 rounded-xl font-bold text-xs transition cursor-pointer">New Key</button>
+                </div>
+                <p class="text-[11px] text-gray-400 leading-relaxed">
+                    Clock in on your work PC, open the app on your phone with the same key, and the live balance appears. Treat the key like a password: anyone who has it can see and change your shifts.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- INSTALL MODAL -->
+    <div id="installModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="bg-gray-900 border border-emerald-800 rounded-3xl max-w-md w-full p-6 space-y-5 relative">
+            <button onclick="closeInstallModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl cursor-pointer"><i class="ph-bold ph-x"></i></button>
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-950 border border-emerald-800 text-emerald-400 flex items-center justify-center text-xl"><i class="ph-bold ph-device-mobile"></i></div>
+                <div>
+                    <h3 class="font-bold text-white text-base">Add to Phone Home Screen</h3>
+                    <p class="text-xs text-gray-400">Pin directly to your mobile screen</p>
+                </div>
+            </div>
+            <div class="space-y-3 text-xs bg-gray-950 p-4 rounded-2xl border border-gray-800">
+                <ol class="space-y-2.5 text-gray-300 list-decimal list-inside">
+                    <li>Open this URL in Chrome or Safari on your phone.</li>
+                    <li>Tap Chrome's <strong>3 Dots</strong> or Safari's <strong>Share Icon</strong>.</li>
+                    <li>Select <strong>'Add to Home screen'</strong>.</li>
+                </ol>
+            </div>
+            <button onclick="closeInstallModal()" class="w-full py-3 bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs rounded-xl transition cursor-pointer">Got It!</button>
+        </div>
+    </div>
 
     <script>
-        // Financial & Rate Constants
-        const BASE_MONTHLY = 15625;
-        const MONTHLY_HOURS = 181.5; // ~8.25 paid hrs/day * 22 days
-        const BASE_HOURLY = BASE_MONTHLY / MONTHLY_HOURS; // ~86.09 EGP/hr
-        const NIGHT_ALLOWANCE = 6.85; // EGP/hr extra for night window
+    (function () {
+        'use strict';
 
-        let state = {
-            clockedIn: false,
-            onBreak: false,
-            startTime: null,
-            breakStartTime: null,
-            totalBreakSeconds: 0,
-            accumulatedEarnings: 0
+        // ---------- Constants ----------
+        const KPI_BONUS_MAX = 3250;
+        const WORK_DAYS_PER_MONTH = 22;
+        const SHIFT_PAID_HOURS = 8.25;
+        const TAX_RATE = 0.15;
+        const NIGHT_START_HOUR = 0, NIGHT_END_HOUR = 7;   // night differential window [0, 7)
+        const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+        // ---------- State ----------
+        // Shift state (synced). Earnings are accumulated per segment so the night
+        // differential only applies to the minutes actually worked at night.
+        const S = {
+            isClockedIn: false, isOnLunch: false, isOnShortBreak: false,
+            runStart: null,        // ms timestamp when the current paid run began (null while on lunch)
+            accSecs: 0,            // paid seconds banked before runStart
+            accEarn: 0,            // gross EGP banked before runStart
+            shiftStart: null,      // ms timestamp of clock-in
+            history: []
+        };
+        // Settings (stored per device)
+        const SET = { package: 15625, probation: true, kpi: 0, night: 6.85 };
+
+        let syncKey = null, dbRoot = null, dbListener = null, dbRefCurrent = null, serverOffset = 0;
+        let baseHourly = 0, viewDate = new Date(), tickTimer = null;
+
+        const $ = id => document.getElementById(id);
+        const now = () => Date.now() + serverOffset;
+        const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        const pad = n => String(n).padStart(2, '0');
+        const isoDay = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+        const legacyDay = d => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        const safeJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+        const store = (k, v) => { try { localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)); } catch (e) {} };
+
+        // ---------- Earnings maths ----------
+        function hourlyAt(hour) {
+            return baseHourly + (hour >= NIGHT_START_HOUR && hour < NIGHT_END_HOUR ? SET.night : 0);
+        }
+        // Integrate pay between two timestamps, switching rate at each hour boundary.
+        function earnBetween(t0, t1) {
+            let total = 0, t = t0;
+            while (t < t1) {
+                const d = new Date(t);
+                let next = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours() + 1).getTime();
+                if (next <= t) next = t + 3600000;
+                const end = Math.min(next, t1);
+                total += ((end - t) / 1000) * (hourlyAt(d.getHours()) / 3600);
+                t = end;
+            }
+            return total;
+        }
+        function totals() {
+            let secs = S.accSecs, earn = S.accEarn;
+            if (S.isClockedIn && S.runStart) {
+                const n = now();
+                secs += Math.max(0, (n - S.runStart) / 1000);
+                earn += earnBetween(S.runStart, n);
+            }
+            return { secs, earn };
+        }
+        function bankRun() {      // fold the running segment into the accumulators
+            if (S.runStart) {
+                const n = now();
+                S.accSecs += Math.max(0, (n - S.runStart) / 1000);
+                S.accEarn += earnBetween(S.runStart, n);
+                S.runStart = null;
+            }
+        }
+
+        // ---------- Persistence & cloud ----------
+        function stateForSave() {
+            return {
+                isClockedIn: S.isClockedIn, isOnLunch: S.isOnLunch, isOnShortBreak: S.isOnShortBreak,
+                runStart: S.runStart, accSecs: S.accSecs, accEarn: S.accEarn, shiftStart: S.shiftStart,
+                shiftHistory: S.history, lastUpdated: Date.now()
+            };
+        }
+        function applyState(d) {
+            S.isClockedIn = !!d.isClockedIn;
+            S.isOnLunch = !!d.isOnLunch;
+            S.isOnShortBreak = !!d.isOnShortBreak;
+            S.runStart = d.runStart || null;
+            S.accSecs = d.accSecs || 0;
+            S.accEarn = d.accEarn || 0;
+            S.shiftStart = d.shiftStart || null;
+            S.history = Array.isArray(d.shiftHistory) ? d.shiftHistory : (d.shiftHistory ? Object.values(d.shiftHistory) : []);
+            // Safety: a clocked-in state that is not on lunch must have a running segment
+            if (S.isClockedIn && !S.isOnLunch && !S.runStart) S.runStart = now();
+            if (!S.isClockedIn) { S.runStart = null; S.accSecs = 0; S.accEarn = 0; }
+        }
+        function save() {
+            const payload = stateForSave();
+            store('cnx_state', payload);
+            if (dbRoot && syncKey) dbRoot.child(syncKey).set(payload).catch(e => setCloud(false, 'Write failed'));
+        }
+        function saveSettings() { store('cnx_settings', SET); }
+
+        function setCloud(ok, msg) {
+            const dot = $('syncStatusDot'), st = $('modalCloudStatus');
+            if (dot) dot.className = 'inline-flex rounded-full h-2 w-2 ' + (ok ? 'bg-emerald-500' : 'bg-gray-500');
+            if (st) { st.textContent = msg; st.className = 'font-bold ' + (ok ? 'text-emerald-400' : 'text-gray-400'); }
+        }
+
+        function genKey() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            const arr = new Uint32Array(8);
+            (window.crypto || window.msCrypto).getRandomValues(arr);
+            return 'CNX-' + Array.from(arr, n => chars[n % chars.length]).join('');
+        }
+
+        function initCloud() {
+            try {
+                if (!firebase.apps.length) firebase.initializeApp({ databaseURL: "https://cnx-alex-tracker-default-rtdb.firebaseio.com" });
+                const db = firebase.database();
+                dbRoot = db.ref('sync_rooms');
+                db.ref('.info/serverTimeOffset').on('value', s => { serverOffset = s.val() || 0; });
+                db.ref('.info/connected').on('value', s => setCloud(!!s.val(), s.val() ? 'Connected to Realtime Database' : 'Offline (saving locally)'));
+            } catch (e) {
+                console.warn('Firebase offline mode:', e);
+                setCloud(false, 'Offline (saving locally)');
+            }
+            attachListener();
+        }
+
+        function attachListener() {
+            $('syncBadgeText').textContent = 'Key: ' + syncKey;
+            $('modalActiveKeyDisplay').textContent = syncKey;
+            if (!dbRoot) return;
+            if (dbRefCurrent && dbListener) dbRefCurrent.off('value', dbListener);   // no stacked listeners
+            dbRefCurrent = dbRoot.child(syncKey);
+            let first = true;
+            dbListener = snap => {
+                const data = snap.val();
+                if (data) {
+                    applyState(data);
+                    store('cnx_state', stateForSave());
+                    refreshAll();
+                } else if (first) {
+                    save();   // brand-new key: publish what this device has
+                }
+                first = false;
+            };
+            dbRefCurrent.on('value', dbListener, e => setCloud(false, 'Read blocked: ' + (e && e.code)));
+        }
+
+        // ---------- Actions ----------
+        window.toggleClock = function () {
+            if (!S.isClockedIn) {
+                S.isClockedIn = true; S.isOnLunch = false; S.isOnShortBreak = false;
+                S.accSecs = 0; S.accEarn = 0;
+                S.shiftStart = now(); S.runStart = S.shiftStart;
+            } else {
+                clockOut();
+                return;
+            }
+            save(); refreshAll();
         };
 
-        function checkNightDifferential() {
-            const now = new Date();
-            const hour = now.getHours();
-            // Night shift window: 00:00 to 07:00 AM
-            const isNight = hour >= 0 && hour < 7;
-            const banner = document.getElementById('nightShiftBanner');
-            if (isNight && document.getElementById('autoNightToggle').checked) {
-                banner.classList.remove('hidden');
-                return true;
-            } else {
-                banner.classList.add('hidden');
-                return false;
-            }
-        }
+        window.toggleLunch = function () {
+            if (!S.isClockedIn) return;
+            S.isOnLunch = !S.isOnLunch;
+            if (S.isOnLunch) { S.isOnShortBreak = false; bankRun(); }   // lunch is unpaid: stop the clock
+            else S.runStart = now();
+            save(); refreshAll();
+        };
 
-        function manualToggleClock() {
-            state.clockedIn = !state.clockedIn;
-            if (state.clockedIn) {
-                state.startTime = Date.now();
-                state.totalBreakSeconds = 0;
-                document.getElementById('clockBtnText').innerText = 'Clock Out Shift';
-                document.getElementById('mainClockBtn').classList.replace('bg-emerald-500', 'bg-rose-500');
-                document.getElementById('mainClockBtn').classList.replace('hover:bg-emerald-600', 'hover:bg-rose-600');
-                document.getElementById('shiftStateLabel').innerText = 'Status: Active Shift (Auto-tracking)';
-                showNotification("Shift Started", "Your earnings counter is now running live.");
-            } else {
-                document.getElementById('clockBtnText').innerText = 'Start Shift Now';
-                document.getElementById('mainClockBtn').classList.replace('bg-rose-500', 'bg-emerald-500');
-                document.getElementById('mainClockBtn').classList.replace('hover:bg-rose-600', 'hover:bg-emerald-600');
-                document.getElementById('shiftStateLabel').innerText = 'Status: Clocked Out';
-            }
-        }
+        // Short breaks are treated as paid: the counter keeps running, only the status label changes.
+        window.toggleShortBreak = function () {
+            if (!S.isClockedIn || S.isOnLunch) return;
+            S.isOnShortBreak = !S.isOnShortBreak;
+            save(); refreshAll();
+        };
 
-        function triggerManualBreak() {
-            if (!state.clockedIn) return;
-            state.onBreak = !state.onBreak;
-            const btnText = document.getElementById('breakBtnText');
-            if (state.onBreak) {
-                state.breakStartTime = Date.now();
-                btnText.innerText = 'Resume Shift';
-                document.getElementById('shiftStateLabel').innerText = 'Status: On Unpaid Lunch Break (Timer paused)';
-            } else {
-                if (state.breakStartTime) {
-                    state.totalBreakSeconds += Math.floor((Date.now() - state.breakStartTime) / 1000);
-                }
-                btnText.innerText = 'Take Lunch (45m)';
-                document.getElementById('shiftStateLabel').innerText = 'Status: Active Shift Resumed';
-            }
-        }
-
-        function resetCurrentShift() {
-            state.clockedIn = false;
-            state.onBreak = false;
-            state.startTime = null;
-            state.totalBreakSeconds = 0;
-            state.accumulatedEarnings = 0;
-            document.getElementById('clockBtnText').innerText = 'Start Shift Now';
-            document.getElementById('mainClockBtn').className = 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-500/20';
-            document.getElementById('shiftStateLabel').innerText = 'Status: Clocked Out (Auto-scheduler ready)';
-            document.getElementById('liveTimerBadge').innerText = '00:00:00';
-            document.getElementById('liveEarningsDisplay').innerHTML = `0.0000 <span class="text-lg font-normal text-emerald-400">EGP</span>`;
-            document.getElementById('netTakeHomeDisplay').innerText = `Estimated Net Take-Home (~15% tax): 0.00 EGP`;
-        }
-
-        function requestNotificationPermission() {
-            if ("Notification" in window) {
-                Notification.requestPermission().then(permission => {
-                    if (permission === "granted") {
-                        alert("Notifications enabled! You will receive earnings updates.");
-                    }
+        function clockOut() {
+            const t = totals();
+            if (t.earn > 1) {
+                const started = new Date(S.shiftStart || now());   // credit the day the shift STARTED (night shifts cross midnight)
+                S.history.unshift({
+                    id: Date.now(),
+                    iso: isoDay(started),
+                    date: legacyDay(started),
+                    time: started.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    duration: fmt(t.secs),
+                    gross: t.earn.toFixed(2),
+                    net: (t.earn * (1 - TAX_RATE)).toFixed(2)
                 });
             }
+            S.isClockedIn = false; S.isOnLunch = false; S.isOnShortBreak = false;
+            S.runStart = null; S.accSecs = 0; S.accEarn = 0; S.shiftStart = null;
+            save(); refreshAll();
         }
 
-        function showNotification(title, body) {
-            if ("Notification" in window && Notification.permission === "granted") {
-                try {
-                    navigator.serviceWorker.ready.then(reg => {
-                        reg.showNotification(title, { body: body, icon: "https://raw.githubusercontent.com/phosphor-icons/core/main/assets/regular/shield-check.svg" });
-                    });
-                } catch(e) {
-                    new Notification(title, { body: body });
-                }
+        window.resetShift = function () {
+            if (S.isClockedIn && !confirm('Discard the current shift without saving it?')) return;
+            S.isClockedIn = false; S.isOnLunch = false; S.isOnShortBreak = false;
+            S.runStart = null; S.accSecs = 0; S.accEarn = 0; S.shiftStart = null;
+            save(); refreshAll();
+        };
+
+        window.deleteShift = function (id) {
+            if (!confirm('Delete this shift from the log?')) return;
+            S.history = S.history.filter(s => s.id !== id);
+            save(); renderHistory(); renderCalendar();
+        };
+
+        window.clearHistory = function () {
+            if (!confirm('Clear all logged shifts on all synced devices?')) return;
+            S.history = [];
+            save(); renderHistory(); renderCalendar();
+        };
+
+        // ---------- Rates ----------
+        window.recalculateRates = function () {
+            SET.package = parseFloat($('packageSelect').value) || 15625;
+            SET.night = Math.max(0, parseFloat($('nightAllowanceInput').value) || 0);
+            SET.kpi = SET.probation ? 0 : (parseFloat($('kpiSlider').value) || 0);
+            $('kpiValueText').textContent = SET.kpi + '%';
+
+            const monthly = SET.package + (SET.probation ? 0 : KPI_BONUS_MAX * SET.kpi / 100);
+            baseHourly = monthly / WORK_DAYS_PER_MONTH / SHIFT_PAID_HOURS;
+
+            $('ratePerHour').textContent = baseHourly.toFixed(2) + ' EGP/h';
+            $('ratePerMinute').textContent = (baseHourly / 60).toFixed(2) + ' EGP/m';
+            $('rateNight').textContent = (baseHourly + SET.night).toFixed(2) + ' EGP/h';
+            $('shiftGoalText').textContent = (baseHourly * SHIFT_PAID_HOURS).toFixed(2) + ' EGP';
+            $('nightBadgeText').textContent = 'Night Differential (+' + SET.night.toFixed(2) + ' LE/h) Active';
+            saveSettings();
+            updateDisplay();
+        };
+
+        window.toggleProbationMode = function () {
+            SET.probation = !SET.probation;
+            applyProbationUI();
+            recalculateRates();
+        };
+
+        function applyProbationUI() {
+            const btn = $('probationToggleBtn'), slider = $('kpiSlider');
+            const base = 'px-3.5 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ';
+            if (SET.probation) {
+                btn.className = base + 'bg-emerald-950 border border-emerald-700 text-emerald-300';
+                $('probationStatusText').textContent = 'First 3 Months (KPI off)';
+                slider.disabled = true; slider.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                btn.className = base + 'bg-cyan-950 border border-cyan-700 text-cyan-300';
+                $('probationStatusText').textContent = 'Post-Probation (KPI Enabled)';
+                slider.disabled = false; slider.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         }
 
-        // Main Ticker Loop
-        setInterval(() => {
-            const isNightActive = checkNightDifferential();
-            const currentHourlyRate = BASE_HOURLY + (isNightActive ? NIGHT_ALLOWANCE : 0);
-            const currentPerSecondRate = currentHourlyRate / 3600;
+        // ---------- Display ----------
+        function fmt(sec) {
+            sec = Math.floor(sec);
+            return pad(Math.floor(sec / 3600)) + ':' + pad(Math.floor((sec % 3600) / 60)) + ':' + pad(sec % 60);
+        }
 
-            if (state.clockedIn && !state.onBreak) {
-                const elapsedSeconds = Math.floor((Date.now() - state.startTime) / 1000) - state.totalBreakSeconds;
-                if (elapsedSeconds > 0) {
-                    state.accumulatedEarnings = elapsedSeconds * currentPerSecondRate;
+        function updateDisplay() {
+            const t = totals();
+            $('liveCounter').textContent = t.earn.toFixed(4);
+            $('netEarningsDisplay').textContent = (t.earn * (1 - TAX_RATE)).toFixed(2) + ' EGP';
+            $('workedTimeDisplay').textContent = fmt(t.secs);
+            $('shiftProgressBar').style.width = Math.min(100, t.secs / (SHIFT_PAID_HOURS * 3600) * 100) + '%';
 
-                    // Format HH:MM:SS
-                    const hrs = String(Math.floor(elapsedSeconds / 3600)).padStart(2, '0');
-                    const mins = String(Math.floor((elapsedSeconds % 3600) / 60)).padStart(2, '0');
-                    const secs = String(elapsedSeconds % 60).padStart(2, '0');
-                    document.getElementById('liveTimerBadge').innerText = `${hrs}:${mins}:${secs}`;
+            const h = new Date().getHours();
+            const night = S.isClockedIn && !S.isOnLunch && h >= NIGHT_START_HOUR && h < NIGHT_END_HOUR;
+            const nb = $('nightStatusBadge');
+            nb.classList.toggle('hidden', !night);
+            nb.classList.toggle('flex', night);
+        }
 
-                    // Update Earnings
-                    document.getElementById('liveEarningsDisplay').innerHTML = `${state.accumulatedEarnings.toFixed(4)} <span class="text-lg font-normal text-emerald-400">EGP</span>`;
-                    
-                    const netTakeHome = state.accumulatedEarnings * 0.85; // 15% tax deduction
-                    document.getElementById('netTakeHomeDisplay').innerText = `Estimated Net Take-Home (~15% tax): ${netTakeHome.toFixed(2)} EGP (Rate: ${currentHourlyRate.toFixed(2)} EGP/h)`;
-
-                    // Auto Break Sequence Check (Trigger 45m lunch automatically after 4 hours if enabled)
-                    if (document.getElementById('autoBreakToggle').checked && elapsedSeconds === 14400) { // 4 hours in
-                        triggerManualBreak();
-                        showNotification("Auto-Lunch Triggered", "Your 45-minute unpaid lunch break has automatically started.");
-                    }
-                }
+        function updateUI() {
+            const clockBtn = $('clockBtn'), lunch = $('breakBtn'), brk = $('shortBreakBtn'), badge = $('shiftStatusBadge');
+            const on = S.isClockedIn;
+            if (on) {
+                clockBtn.className = 'flex-1 min-w-[140px] py-3.5 px-5 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm transition flex items-center justify-center gap-2 cursor-pointer';
+                clockBtn.innerHTML = '<i class="ph-bold ph-stop"></i><span>Clock Out</span>';
+            } else {
+                clockBtn.className = 'flex-1 min-w-[140px] py-3.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2 cursor-pointer';
+                clockBtn.innerHTML = '<i class="ph-bold ph-play"></i><span>Clock In Shift</span>';
             }
-        }, 2000);
+            [lunch, brk].forEach(b => {
+                b.disabled = !on;
+                b.classList.toggle('opacity-50', !on);
+                b.classList.toggle('cursor-not-allowed', !on);
+                b.classList.toggle('hover:bg-gray-700', on);
+            });
+            brk.disabled = !on || S.isOnLunch;
+            $('breakBtnLabel').textContent = S.isOnLunch ? 'Resume Work' : 'Take Lunch (45m, unpaid)';
+            $('shortBreakLabel').textContent = S.isOnShortBreak ? 'Back from Break' : 'Break (15m, paid)';
+
+            badge.textContent = !on ? 'Clocked Out' : S.isOnLunch ? 'On Lunch (unpaid)' : S.isOnShortBreak ? 'On 15m Break (paid)' : 'Clocked In';
+            badge.className = 'text-xs font-semibold px-3 py-1 rounded-full border ' +
+                (on ? 'bg-emerald-950 text-emerald-400 border-emerald-800' : 'bg-gray-800 text-gray-400 border-gray-700');
+            $('pulseDot').classList.toggle('hidden', !(on && !S.isOnLunch));
+        }
+
+        function refreshAll() { updateUI(); updateDisplay(); renderHistory(); renderCalendar(); }
+
+        function startTicker() {
+            clearInterval(tickTimer);
+            // Pay is derived from timestamps, so a throttled background tab or sleeping phone never loses time.
+            tickTimer = setInterval(() => { if (S.isClockedIn && S.runStart) updateDisplay(); }, 100);
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) updateDisplay(); });
+        }
+
+        // ---------- History & calendar ----------
+        function renderHistory() {
+            const list = $('historyList');
+            if (!S.history.length) { list.innerHTML = '<div class="text-xs text-gray-500 text-center py-4">No logged shifts yet.</div>'; return; }
+            list.innerHTML = S.history.map(s =>
+                '<div class="flex items-center justify-between p-3 rounded-2xl bg-gray-950 border border-gray-800 text-xs">' +
+                    '<div class="flex items-center gap-3">' +
+                        '<div class="w-8 h-8 rounded-xl bg-emerald-950 text-emerald-400 flex items-center justify-center font-bold"><i class="ph-bold ph-check"></i></div>' +
+                        '<div><div class="font-bold text-white">' + esc(s.date) + ' <span class="text-gray-500 font-normal">(' + esc(s.time) + ')</span></div>' +
+                        '<div class="text-[11px] text-gray-400">Duration: ' + esc(s.duration) + '</div></div>' +
+                    '</div>' +
+                    '<div class="flex items-center gap-3">' +
+                        '<div class="text-right"><div class="font-bold font-mono text-emerald-400">+' + esc(s.gross) + ' EGP</div>' +
+                        '<div class="text-[10px] text-cyan-400 font-mono">Net ~' + esc(s.net) + ' EGP</div></div>' +
+                        '<button onclick="deleteShift(' + (Number(s.id) || 0) + ')" title="Delete" class="text-gray-600 hover:text-red-400 cursor-pointer"><i class="ph-bold ph-trash"></i></button>' +
+                    '</div>' +
+                '</div>').join('');
+        }
+
+        function renderCalendar() {
+            const grid = $('calendarDaysGrid');
+            const y = viewDate.getFullYear(), m = viewDate.getMonth();
+            $('calendarMonthLabel').textContent = MONTHS[m] + ' ' + y;
+
+            const byDay = {};
+            S.history.forEach(s => {
+                const k = s.iso || s.date;     // old entries only have the "02 Nov 2026" string
+                byDay[k] = (byDay[k] || 0) + (parseFloat(s.gross) || 0);
+            });
+
+            let start = new Date(y, m, 1).getDay() - 1; if (start < 0) start = 6;
+            const daysInMonth = new Date(y, m + 1, 0).getDate();
+            let html = '', gross = 0, worked = 0;
+            for (let i = 0; i < start; i++) html += '<div class="h-14 rounded-xl bg-gray-950/40 border border-gray-900"></div>';
+            for (let day = 1; day <= daysInMonth; day++) {
+                const d = new Date(y, m, day);
+                const earned = (byDay[isoDay(d)] || 0) + (byDay[legacyDay(d)] || 0);
+                if (earned > 0) { worked++; gross += earned; }
+                html += '<div class="h-14 rounded-xl p-1.5 flex flex-col justify-between border ' + (earned > 0 ? 'border-emerald-800 bg-emerald-950/30' : 'border-gray-800 bg-gray-950/80') + '">' +
+                    '<div class="flex justify-between items-center text-[10px]"><span class="font-bold text-gray-400">' + day + '</span>' +
+                    (earned > 0 ? '<i class="ph-bold ph-check-circle text-emerald-400"></i>' : '') + '</div>' +
+                    '<div class="text-right">' + (earned > 0
+                        ? '<div class="font-mono font-bold text-emerald-400 text-[10px]">' + earned.toFixed(0) + '</div><div class="text-[8px] text-gray-500">EGP</div>'
+                        : '<div class="text-[9px] text-gray-700 italic">Off</div>') + '</div></div>';
+            }
+            grid.innerHTML = html;
+            $('calStatShifts').textContent = worked;
+            $('calStatGross').textContent = gross.toFixed(2) + ' EGP';
+            $('calStatNet').textContent = (gross * (1 - TAX_RATE)).toFixed(2) + ' EGP';
+        }
+
+        window.changeMonth = function (delta) {
+            viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + delta, 1);   // day=1 avoids 31st overflow
+            renderCalendar();
+        };
+
+        window.exportCSV = function () {
+            const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+            let csv = '\uFEFFDate,Start Time,Duration,Gross EGP,Net EGP\n';
+            S.history.forEach(s => { csv += [q(s.iso || s.date), q(s.time), q(s.duration), s.gross, s.net].join(',') + '\n'; });
+            const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+            const a = document.createElement('a');
+            a.href = url; a.download = 'cnx_shift_history.csv';
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        };
+
+        // ---------- Navigation & modals ----------
+        window.switchTab = function (name) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => { el.classList.remove('tab-active'); el.classList.add('text-gray-400'); });
+            $('tab-content-' + name).classList.remove('hidden');
+            const b = $('tab-btn-' + name); b.classList.add('tab-active'); b.classList.remove('text-gray-400');
+            if (name === 'calendar') renderCalendar();
+            if (name === 'settings') renderHistory();
+        };
+        const modal = (id, show) => { const el = $(id); el.classList.toggle('hidden', !show); el.classList.toggle('flex', show); };
+        window.openSyncModal = () => modal('syncModal', true);
+        window.closeSyncModal = () => modal('syncModal', false);
+        window.openInstallModal = () => modal('installModal', true);
+        window.closeInstallModal = () => modal('installModal', false);
+
+        window.applySyncKey = function () {
+            const v = $('syncKeyInputField').value.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');   // Firebase-safe path
+            if (v.length < 6) { alert('Enter a valid Sync Key.'); return; }
+            syncKey = v; store('cnx_sync_key', v);
+            attachListener(); closeSyncModal();
+        };
+        window.copySyncKey = function () {
+            if (navigator.clipboard) navigator.clipboard.writeText(syncKey).then(() => alert('Sync Key copied: ' + syncKey));
+            else prompt('Copy your Sync Key:', syncKey);
+        };
+        window.generateNewKey = function () {
+            if (!confirm('Create a new key? Your other devices must enter it to stay in sync.')) return;
+            syncKey = genKey(); store('cnx_sync_key', syncKey);
+            attachListener(); save();
+        };
+
+        // ---------- Init ----------
+        document.addEventListener('DOMContentLoaded', function () {
+            const savedSet = safeJSON('cnx_settings');
+            if (savedSet) Object.assign(SET, savedSet);
+            $('packageSelect').value = String(SET.package);
+            $('nightAllowanceInput').value = SET.night;
+            $('kpiSlider').value = SET.kpi;
+            applyProbationUI();
+            recalculateRates();
+
+            const local = safeJSON('cnx_state');
+            if (local) applyState(local);
+
+            syncKey = localStorage.getItem('cnx_sync_key');
+            if (!syncKey || syncKey === 'CNX-ALEX-7788') {     // never reuse the old public default key
+                syncKey = genKey(); store('cnx_sync_key', syncKey);
+            }
+
+            refreshAll();
+            startTicker();
+            initCloud();
+        });
+    })();
     </script>
 </body>
 </html>
