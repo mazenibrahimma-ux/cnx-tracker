@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concentrix Shift Earnings Visualizer</title>
+    <!-- Web App / PWA Meta Tags for Phone Home Screen Install -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CNX Tracker">
+    <meta name="theme-color" content="#0b0f19">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#ecfeff',
+                            100: '#cffafe',
+                            400: '#22d3ee',
+                            500: '#06b6d4',
+                            600: '#0891b2',
+                            900: '#164e63',
+                        },
+                        accent: {
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                        },
+                        darkbg: '#0b0f19',
+                        cardbg: '#111827',
+                        borderbg: '#1f2937'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts & Phosphor Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+            color: #f3f4f6;
+        }
+        .glow-text {
+            text-shadow: 0 0 20px rgba(34, 197, 94, 0.4), 0 0 40px rgba(34, 197, 94, 0.2);
+        }
+        .glow-cyan {
+            text-shadow: 0 0 20px rgba(34, 211, 238, 0.4);
+        }
+        .glow-box {
+            box-shadow: 0 0 30px -5px rgba(34, 197, 94, 0.15);
+        }
+        /* Custom smooth scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111827;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 3px;
+        }
+        .tab-active {
+            color: #22d3ee;
+            border-color: #06b6d4;
+            background-color: rgba(6, 182, 212, 0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-cyan-500 selection:text-black">
+
+    <!-- Header / Brand Bar -->
+    <header class="border-b border-gray-800 bg-gray-900/80 backdrop-blur-md sticky top-0 z-40 px-4 py-3 sm:px-8 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-emerald-400 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-cyan-500/20">
+                CNX
+            </div>
+            <div>
+                <h1 class="text-base font-bold tracking-wide text-white flex items-center gap-2">
+                    Shift Tracker <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800">WALMART ALEX</span>
+                </h1>
+                <p class="text-xs text-gray-400">Concentrix Precision Earnings Visualizer</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-2 text-xs">
+            <!-- Lifetime Earnings Quick Pill -->
+            <div class="hidden lg:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-950/80 border border-emerald-800/80 text-emerald-300 font-bold">
+                <i class="ph-bold ph-vault text-emerald-400"></i>
+                <span>Lifetime: <span id="headerLifetimeTotal" class="text-white font-mono">0.00 EGP</span></span>
+            </div>
+            <!-- Interactive Cloud Status Button -->
+            <button onclick="openCloudModal()" id="cloudStatusBadge" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-950/80 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-800/80 font-medium text-[11px] transition cursor-pointer">
+                <i id="cloudIcon" class="ph-bold ph-cloud-check text-cyan-400 text-sm"></i>
+                <span id="cloudStatusText">Cloud Backup</span>
+            </button>
+            <!-- Mobile Install Button -->
+            <button onclick="showInstallHelp()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-950/80 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-800/80 font-medium text-[11px] transition cursor-pointer">
+                <i class="ph-bold ph-device-mobile text-cyan-400"></i>
+                <span>Install App</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs Bar (Mobile Optimized) -->
+    <div class="bg-gray-900 border-b border-gray-800 px-4 py-2 sticky top-[61px] z-30">
+        <div class="max-w-4xl mx-auto flex items-center justify-center gap-2 sm:gap-4 text-xs font-semibold">
+            <button onclick="switchTab('live')" id="tab-btn-live" class="tab-btn tab-active flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition">
+                <i class="ph-bold ph-lightning text-base"></i>
+                <span>Live Shift</span>
+            </button>
+            <button onclick="switchTab('calendar')" id="tab-btn-calendar" class="tab-btn text-gray-400 hover:text-white flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition">
+                <i class="ph-bold ph-calendar text-base"></i>
+                <span>Calendar</span>
+            </button>
+            <button onclick="switchTab('settings')" id="tab-btn-settings" class="tab-btn text-gray-400 hover:text-white flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition">
+                <i class="ph-bold ph-sliders text-base"></i>
+                <span>Pay & Log</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <main class="max-w-4xl mx-auto px-4 py-6 sm:px-6 space-y-6 flex-grow w-full">
+
+        <!-- TAB 1: LIVE SHIFT VIEW -->
+        <div id="tab-content-live" class="tab-content space-y-6">
+            <!-- Top Overview Hero Stats -->
+            <div class="grid grid-cols-1 gap-4">
+                <!-- Live Shift Earnings Card -->
+                <div class="bg-gray-900/90 border border-emerald-900/40 rounded-3xl p-6 glow-box relative overflow-hidden flex flex-col justify-between">
+                    <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                                <span class="relative flex h-2 w-2">
+                                    <span id="pulseDot" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 hidden"></span>
+                                    <span id="solidDot" class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </span>
+                                Live Shift Earnings
+                            </span>
+                            <span id="shiftStatusBadge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-800 text-gray-400">
+                                Clocked Out
+                            </span>
+                        </div>
+
+                        <!-- Counter Ticker -->
+                        <div class="my-4">
+                            <div class="flex items-baseline gap-2 flex-wrap">
+                                <span id="liveCounter" class="text-4xl sm:text-6xl font-extrabold font-mono text-emerald-400 glow-text tracking-tight">0.0000</span>
+                                <span class="text-xl font-bold text-emerald-500 font-mono">EGP</span>
+                            </div>
+                            <div class="flex items-center gap-4 mt-2 text-xs text-gray-400">
+                                <span>Estimated Net Take-Home (~15% tax): <strong id="netEarningsDisplay" class="text-cyan-400 font-mono">0.00 EGP</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Control Buttons -->
+                    <div class="flex flex-wrap gap-3 pt-4 border-t border-gray-800/80">
+                        <button id="clockBtn" onclick="toggleClock()" class="flex-1 min-w-[140px] py-3 px-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                            <i class="ph-bold ph-play"></i>
+                            <span>Clock In Shift</span>
+                        </button>
+                        <button id="breakBtn" onclick="toggleBreak()" disabled class="py-3 px-5 rounded-2xl bg-gray-800 hover:bg-gray-700 text-gray-400 font-bold text-sm transition border border-gray-700 opacity-50 cursor-not-allowed flex items-center justify-center gap-2">
+                            <i class="ph-bold ph-coffee"></i>
+                            <span>Take Lunch (45m)</span>
+                        </button>
+                        <button onclick="resetShift()" class="py-3 px-4 rounded-2xl bg-gray-800/60 hover:bg-red-950/60 hover:text-red-400 text-gray-400 font-semibold text-sm transition border border-gray-800 flex items-center justify-center">
+                            <i class="ph-bold ph-arrow-counter-clockwise text-base"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Shift Progression Card -->
+                <div class="bg-gray-900/90 border border-gray-800 rounded-3xl p-6 flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+                                <i class="ph-bold ph-clock text-base"></i> Shift Progression
+                            </h3>
+                            <div id="nightStatusBadge" class="hidden items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 text-[10px] font-semibold animate-pulse">
+                                <i class="ph-bold ph-moon-stars text-indigo-400"></i>
+                                <span>Night Bonus (+6.85 LE/h)</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold mb-1">
+                                <span class="text-gray-400">Active Paid Time</span>
+                                <span id="workedTimeDisplay" class="font-mono text-cyan-300">00:00:00</span>
+                            </div>
+                            <!-- Progress Bar -->
+                            <div class="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
+                                <div id="shiftProgressBar" class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full w-0 transition-all duration-500"></div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 pt-2">
+                            <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800/80">
+                                <span class="text-[10px] uppercase font-bold text-gray-500 block">Hourly Base</span>
+                                <span id="ratePerHour" class="text-sm font-bold text-white font-mono">86.09 EGP/h</span>
+                            </div>
+                            <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800/80">
+                                <span class="text-[10px] uppercase font-bold text-gray-500 block">Per Minute</span>
+                                <span id="ratePerMinute" class="text-sm font-bold text-emerald-400 font-mono">1.43 EGP/m</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-gray-800/80 flex items-center justify-between text-xs text-gray-400">
+                        <span>Shift Target (<span id="maxShiftHoursText">8.25 Paid Hrs</span>):</span>
+                        <span id="shiftGoalText" class="font-bold font-mono text-white">710.23 EGP</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: CALENDAR VIEW -->
+        <div id="tab-content-calendar" class="tab-content hidden space-y-6">
+            <div class="bg-gray-900/90 border border-gray-800 rounded-3xl p-6 space-y-4">
+                <div class="flex justify-between items-center flex-wrap gap-2 border-b border-gray-800 pb-4">
+                    <div>
+                        <h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+                            <i class="ph-bold ph-calendar text-lg"></i> Concentrix Monthly Shift Calendar
+                        </h2>
+                        <p class="text-xs text-gray-400 mt-0.5">Visual overview of worked shifts and pay period totals</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="changeMonth(-1)" class="p-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 transition">
+                            <i class="ph-bold ph-caret-left"></i>
+                        </button>
+                        <span id="calendarMonthLabel" class="text-sm font-bold text-white font-mono min-w-[130px] text-center">November 2026</span>
+                        <button onclick="changeMonth(1)" class="p-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 transition">
+                            <i class="ph-bold ph-caret-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Calendar Stats Summary Header -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center">
+                        <span class="text-[10px] uppercase font-bold text-gray-500 block">Shifts Completed</span>
+                        <span id="calStatShifts" class="text-base font-bold text-white font-mono">0</span>
+                    </div>
+                    <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center">
+                        <span class="text-[10px] uppercase font-bold text-gray-500 block">Month Gross Pay</span>
+                        <span id="calStatGross" class="text-base font-bold text-emerald-400 font-mono">0.00 EGP</span>
+                    </div>
+                    <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center">
+                        <span class="text-[10px] uppercase font-bold text-gray-500 block">Month Net Pay (~15%)</span>
+                        <span id="calStatNet" class="text-base font-bold text-cyan-400 font-mono">0.00 EGP</span>
+                    </div>
+                </div>
+
+                <!-- Calendar Grid -->
+                <div class="grid grid-cols-7 gap-1.5 text-center text-xs">
+                    <div class="text-gray-500 font-bold py-1">Mon</div>
+                    <div class="text-gray-500 font-bold py-1">Tue</div>
+                    <div class="text-gray-500 font-bold py-1">Wed</div>
+                    <div class="text-gray-500 font-bold py-1">Thu</div>
+                    <div class="text-gray-500 font-bold py-1">Fri</div>
+                    <div class="text-gray-500 font-bold py-1 text-cyan-400">Sat</div>
+                    <div class="text-gray-500 font-bold py-1 text-cyan-400">Sun</div>
+                </div>
+                <div id="calendarDaysGrid" class="grid grid-cols-7 gap-1.5">
+                    <!-- Days auto populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: SETTINGS & HISTORY VIEW -->
+        <div id="tab-content-settings" class="tab-content hidden space-y-6">
+            <!-- Concentrix Package & Rate Config Controls -->
+            <div class="bg-gray-900/90 border border-gray-800 rounded-3xl p-6 space-y-4">
+                <div class="flex justify-between items-center border-b border-gray-800 pb-3 flex-wrap gap-2">
+                    <div>
+                        <h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+                            <i class="ph-bold ph-sliders text-lg"></i> Pay Settings & Concentrix Allowances
+                        </h2>
+                        <p class="text-xs text-gray-400 mt-0.5">Walmart Alexandria Offer Package Setup</p>
+                    </div>
+                    <button onclick="toggleProbationMode()" id="probationToggleBtn" class="px-3 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 bg-emerald-950 border border-emerald-700 text-emerald-300">
+                        <i class="ph-bold ph-shield-check text-base"></i>
+                        <span id="probationStatusText">First 3 Months (Base 15,625 EGP)</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                    <div class="space-y-1.5">
+                        <label class="font-semibold text-gray-300 block">Monthly Base Package</label>
+                        <select id="packageSelect" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-cyan-500 font-mono">
+                            <option value="15625">15,625 EGP (Basic + Language + COLA)</option>
+                            <option value="11950">11,950 EGP (Basic + Language Only)</option>
+                            <option value="9450">9,450 EGP (Basic Salary Only)</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="font-semibold text-gray-300 block">Monthly KPI Percentage (Up to 3,250 EGP)</label>
+                        <div class="flex items-center gap-2">
+                            <input type="range" id="kpiSlider" min="0" max="100" value="0" oninput="recalculateRates()" disabled class="w-full opacity-50 cursor-not-allowed accent-cyan-400">
+                            <span id="kpiValueText" class="font-mono text-cyan-400 font-bold min-w-[36px]">0%</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="font-semibold text-gray-300 block">Shift Timing Window</label>
+                        <select id="shiftTimingSelect" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-cyan-500 font-mono">
+                            <option value="night">23:00 - 08:00 (Overnight - 6.85 LE/hr)</option>
+                            <option value="day">09:00 - 18:00 (Standard Day Shift)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Saved Shift History Log -->
+            <div class="bg-gray-900/90 border border-gray-800 rounded-3xl p-6 space-y-4">
+                <div class="flex justify-between items-center flex-wrap gap-2">
+                    <div>
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                            <i class="ph-bold ph-clock-counter-clockwise text-lg"></i> Completed Shift History Log
+                        </h3>
+                        <p class="text-xs text-gray-400">Recorded work shifts and lifetime Concentrix pay accumulation</p>
+                    </div>
+                    <button onclick="clearHistory()" class="text-xs text-red-400 hover:text-red-300 font-semibold px-3 py-1.5 rounded-lg bg-red-950/40 border border-red-900/60 transition">
+                        Clear History
+                    </button>
+                </div>
+
+                <div id="historyList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    <!-- History logs inserted via JS -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Cloud Sync Modal Popup -->
+    <div id="cloudModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-gray-900 border border-cyan-800 rounded-3xl max-w-md w-full p-6 space-y-4 relative">
+            <button onclick="closeCloudModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">
+                <i class="ph-bold ph-x"></i>
+            </button>
+
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-cyan-950 border border-cyan-800 text-cyan-400 flex items-center justify-center text-xl">
+                    <i class="ph-bold ph-cloud-arrow-up"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-white text-base">Cloud Sync & Device Pairing</h3>
+                    <p class="text-xs text-gray-400">Sync shift timer live between Phone & PC</p>
+                </div>
+            </div>
+
+            <div class="bg-gray-950 p-4 rounded-2xl border border-gray-800 space-y-3 text-xs">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400">Sync Status:</span>
+                    <span id="modalCloudStatus" class="font-bold text-cyan-400 flex items-center gap-1">
+                        <i class="ph-bold ph-check-circle"></i> Connected
+                    </span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400">Your Anonymous Device Key:</span>
+                    <span id="userKeyDisplay" class="font-mono text-white text-[11px] truncate max-w-[150px]">Loading...</span>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs font-semibold text-gray-300">Pair this device on PC / Second Phone:</label>
+                <div class="flex items-center gap-2">
+                    <input id="shareUrlInput" readonly type="text" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-xs text-gray-300 font-mono focus:outline-none">
+                    <button onclick="copyShareUrl()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-black font-bold text-xs rounded-xl transition flex items-center gap-1">
+                        <i class="ph-bold ph-copy"></i> Copy
+                    </button>
+                </div>
+                <p class="text-[11px] text-gray-500">Open this link on any device to mirror your shift status and calendar instantly!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phone App Installation Modal Popup -->
+    <div id="installModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-gray-900 border border-emerald-800 rounded-3xl max-w-md w-full p-6 space-y-5 relative">
+            <button onclick="closeInstallModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">
+                <i class="ph-bold ph-x"></i>
+            </button>
+
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-950 border border-emerald-800 text-emerald-400 flex items-center justify-center text-xl">
+                    <i class="ph-bold ph-device-mobile"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-white text-base">Add to Phone Home Screen</h3>
+                    <p class="text-xs text-gray-400">Use as a full screen phone app</p>
+                </div>
+            </div>
+
+            <!-- Dynamic Guide based on OS -->
+            <div id="iosInstallGuide" class="space-y-3 text-xs bg-gray-950 p-4 rounded-2xl border border-gray-800">
+                <div class="font-bold text-cyan-400 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                    <i class="ph-bold ph-apple-logo text-sm"></i> iPhone / iPad Safari Instructions
+                </div>
+                <ol class="space-y-2.5 text-gray-300 list-decimal list-inside">
+                    <li>Tap the <strong class="text-white">Share Button</strong> <i class="ph-bold ph-export text-cyan-400 text-sm"></i> at the bottom of Safari.</li>
+                    <li>Scroll down and select <strong class="text-white">'Add to Home Screen'</strong> <i class="ph-bold ph-plus-square text-emerald-400 text-sm"></i>.</li>
+                    <li>Tap <strong class="text-white">'Add'</strong> in the top right corner.</li>
+                </ol>
+            </div>
+
+            <div id="androidInstallGuide" class="space-y-3 text-xs bg-gray-950 p-4 rounded-2xl border border-gray-800">
+                <div class="font-bold text-emerald-400 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                    <i class="ph-bold ph-android-logo text-sm"></i> Android Chrome Instructions
+                </div>
+                <ol class="space-y-2.5 text-gray-300 list-decimal list-inside">
+                    <li>Tap the <strong class="text-white">Menu Options (3 Dots)</strong> <i class="ph-bold ph-dots-three-vertical text-emerald-400 text-sm"></i> top right.</li>
+                    <li>Select <strong class="text-white">'Add to Home screen'</strong> or <strong class="text-white">'Install app'</strong>.</li>
+                    <li>Confirm by tapping <strong class="text-white">'Add'</strong>.</li>
+                </ol>
+            </div>
+
+            <button onclick="closeInstallModal()" class="w-full py-3 bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs rounded-xl transition">
+                Got It!
+            </button>
+        </div>
+    </div>
+
+    <!-- Firebase Imports for Cloud Storage -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'concentrix-shift-tracker-app';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "demo-api-key",
+            authDomain: "demo-app.firebaseapp.com",
+            projectId: "demo-app",
+            storageBucket: "demo-app.appspot.com",
+            messagingSenderId: "000000000000",
+            appId: "1:000000000000:web:000000000000"
+        };
+
+        let app, db, auth, user;
+
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            const initAuth = async () => {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            };
+
+            onAuthStateChanged(auth, (u) => {
+                if (u) {
+                    user = u;
+                    const keyEl = document.getElementById('userKeyDisplay');
+                    const urlInput = document.getElementById('shareUrlInput');
+                    if (keyEl) keyEl.innerText = user.uid;
+                    if (urlInput) urlInput.value = window.location.href;
+                    setupCloudListeners();
+                } else {
+                    initAuth().catch(err => console.log("Cloud auth offline, running local-only"));
+                }
+            });
+        } catch(e) {
+            console.log("Firebase setup skipped, using local storage mode", e);
+        }
+
+        window.saveDataToCloud = async function() {
+            if (!db || !user) return;
+            const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'user_data', 'shift_tracker_state');
+            try {
+                await setDoc(docRef, {
+                    shiftHistory: window.shiftHistory || [],
+                    lastUpdated: Date.now()
+                }, { merge: true });
+                updateCloudBadge(true);
+            } catch(e) {
+                console.error("Error saving to cloud", e);
+                updateCloudBadge(false);
+            }
+        };
+
+        function setupCloudListeners() {
+            if (!db || !user) return;
+            const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'user_data', 'shift_tracker_state');
+            
+            onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.shiftHistory && Array.isArray(data.shiftHistory)) {
+                        if (data.shiftHistory.length >= (window.shiftHistory || []).length) {
+                            window.shiftHistory = data.shiftHistory;
+                            localStorage.setItem('cnx_shift_history', JSON.stringify(window.shiftHistory));
+                            if (typeof window.renderShiftHistory === 'function') window.renderShiftHistory();
+                            if (typeof window.renderCalendar === 'function') window.renderCalendar();
+                        }
+                    }
+                }
+                updateCloudBadge(true);
+            }, (error) => {
+                console.log("Cloud listener notice:", error);
+                updateCloudBadge(false);
+            });
+        }
+
+        function updateCloudBadge(online) {
+            const icon = document.getElementById('cloudIcon');
+            const txt = document.getElementById('cloudStatusText');
+            const modalStatus = document.getElementById('modalCloudStatus');
+            if (icon && txt) {
+                if (online) {
+                    icon.className = "ph-bold ph-cloud-check text-cyan-400 text-sm";
+                    txt.innerText = "Cloud Active";
+                    if (modalStatus) modalStatus.innerHTML = `<i class="ph-bold ph-check-circle"></i> Connected`;
+                } else {
+                    icon.className = "ph-bold ph-cloud-slash text-gray-500 text-sm";
+                    txt.innerText = "Local Mode";
+                    if (modalStatus) modalStatus.innerHTML = `<i class="ph-bold ph-warning text-amber-400"></i> Local Storage`;
+                }
+            }
+        }
+    </script>
+
+    <!-- Global Application JS Code -->
+    <script>
+        const APP_VERSION = "1.2.0";
+        const NIGHT_ALLOWANCE_PER_HOUR = 6.85;
+        const TAX_DEDUCTION_RATE = 0.15;
+        const SHIFT_PAID_HOURS = 8.25;
+
+        let isClockedIn = false;
+        let isOnBreak = false;
+        let probationMode = true;
+        let startTime = null;
+        let accumulatedTime = 0;
+        let breakStartTime = null;
+        let animFrameId = null;
+
+        let baseMonthlyPackage = 15625;
+        let kpiBonusMax = 3250;
+        let kpiPercent = 0;
+        let currentHourlyRate = 0;
+        let currentPerSecondRate = 0;
+
+        window.shiftHistory = [];
+        let currentDateView = new Date();
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('tab-active', 'text-cyan-400');
+                el.classList.add('text-gray-400');
+            });
+
+            const targetContent = document.getElementById(`tab-content-${tabName}`);
+            const targetBtn = document.getElementById(`tab-btn-${tabName}`);
+
+            if (targetContent) targetContent.classList.remove('hidden');
+            if (targetBtn) {
+                targetBtn.classList.add('tab-active');
+                targetBtn.classList.remove('text-gray-400');
+            }
+
+            if (tabName === 'calendar') renderCalendar();
+            if (tabName === 'settings') renderShiftHistory();
+        }
+
+        function openCloudModal() {
+            const modal = document.getElementById('cloudModal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeCloudModal() {
+            const modal = document.getElementById('cloudModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function copyShareUrl() {
+            const input = document.getElementById('shareUrlInput');
+            if (input) {
+                input.select();
+                document.execCommand('copy');
+                alert("Cloud Sync Link copied to clipboard! Open it on your PC or second phone to pair devices.");
+            }
+        }
+
+        function toggleProbationMode() {
+            probationMode = !probationMode;
+            const btn = document.getElementById('probationToggleBtn');
+            const slider = document.getElementById('kpiSlider');
+            const statusTxt = document.getElementById('probationStatusText');
+
+            if (probationMode) {
+                if (btn) btn.className = "px-3 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 bg-emerald-950 border border-emerald-700 text-emerald-300";
+                if (statusTxt) statusTxt.innerText = "First 3 Months (Base 15,625 EGP)";
+                if (slider) {
+                    slider.disabled = true;
+                    slider.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+            } else {
+                if (btn) btn.className = "px-3 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 bg-cyan-950 border border-cyan-700 text-cyan-300";
+                if (statusTxt) statusTxt.innerText = "KPI Active Mode";
+                if (slider) {
+                    slider.disabled = false;
+                    slider.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            }
+            recalculateRates();
+        }
+
+        function recalculateRates() {
+            const pkgSelect = document.getElementById('packageSelect');
+            const kpiSlider = document.getElementById('kpiSlider');
+            const kpiTxt = document.getElementById('kpiValueText');
+
+            if (pkgSelect) baseMonthlyPackage = parseFloat(pkgSelect.value) || 15625;
+            
+            if (kpiSlider && kpiTxt) {
+                kpiPercent = probationMode ? 0 : parseFloat(kpiSlider.value) || 0;
+                kpiTxt.innerText = `${kpiPercent}%`;
+            }
+
+            const totalMonthly = baseMonthlyPackage + (probationMode ? 0 : (kpiBonusMax * (kpiPercent / 100)));
+            const dailyRate = totalMonthly / 22;
+            currentHourlyRate = dailyRate / SHIFT_PAID_HOURS;
+
+            const shiftTimingSelect = document.getElementById('shiftTimingSelect');
+            const nightBadge = document.getElementById('nightStatusBadge');
+            
+            let effectiveHourlyRate = currentHourlyRate;
+            if (shiftTimingSelect && shiftTimingSelect.value === 'night') {
+                effectiveHourlyRate += NIGHT_ALLOWANCE_PER_HOUR;
+                if (nightBadge) nightBadge.classList.remove('hidden');
+            } else {
+                if (nightBadge) nightBadge.classList.add('hidden');
+            }
+
+            currentPerSecondRate = effectiveHourlyRate / 3600;
+
+            const elRateHr = document.getElementById('ratePerHour');
+            const elRateMin = document.getElementById('ratePerMinute');
+            const elGoal = document.getElementById('shiftGoalText');
+
+            if (elRateHr) elRateHr.innerText = `${effectiveHourlyRate.toFixed(2)} EGP/h`;
+            if (elRateMin) elRateMin.innerText = `${(effectiveHourlyRate / 60).toFixed(2)} EGP/m`;
+            if (elGoal) elGoal.innerText = `${(effectiveHourlyRate * SHIFT_PAID_HOURS).toFixed(2)} EGP`;
+
+            updateDisplay();
+        }
+
+        function toggleClock() {
+            if (!isClockedIn) {
+                isClockedIn = true;
+                isOnBreak = false;
+                startTime = Date.now() - accumulatedTime;
+                startTicker();
+            } else {
+                clockOutShift();
+            }
+            saveCurrentState();
+            updateUI();
+        }
+
+        function toggleBreak() {
+            if (!isClockedIn) return;
+            isOnBreak = !isOnBreak;
+
+            if (isOnBreak) {
+                breakStartTime = Date.now();
+            } else {
+                if (breakStartTime) {
+                    breakStartTime = null;
+                }
+            }
+            saveCurrentState();
+            updateUI();
+        }
+
+        function clockOutShift() {
+            if (!isClockedIn) return;
+
+            const elapsedSecs = getActiveElapsedSeconds();
+            const earnedGross = elapsedSecs * currentPerSecondRate;
+            const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+            if (earnedGross > 5) {
+                shiftHistory.unshift({
+                    id: Date.now(),
+                    date: dateStr,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    duration: formatTime(elapsedSecs),
+                    gross: earnedGross.toFixed(2),
+                    net: (earnedGross * (1 - TAX_DEDUCTION_RATE)).toFixed(2)
+                });
+                saveShiftHistory();
+            }
+
+            isClockedIn = false;
+            isOnBreak = false;
+            accumulatedTime = 0;
+            startTime = null;
+            cancelAnimationFrame(animFrameId);
+            saveCurrentState();
+            updateUI();
+            renderShiftHistory();
+            renderCalendar();
+        }
+
+        function resetShift() {
+            isClockedIn = false;
+            isOnBreak = false;
+            accumulatedTime = 0;
+            startTime = null;
+            cancelAnimationFrame(animFrameId);
+            saveCurrentState();
+            updateUI();
+            updateDisplay();
+        }
+
+        function startTicker() {
+            cancelAnimationFrame(animFrameId);
+            function tick() {
+                if (isClockedIn) {
+                    updateDisplay();
+                    animFrameId = requestAnimationFrame(tick);
+                }
+            }
+            animFrameId = requestAnimationFrame(tick);
+        }
+
+        function getActiveElapsedSeconds() {
+            if (!isClockedIn || !startTime) return accumulatedTime / 1000;
+            if (isOnBreak) return accumulatedTime / 1000;
+            return (Date.now() - startTime) / 1000;
+        }
+
+        function updateDisplay() {
+            const elapsedSecs = getActiveElapsedSeconds();
+            const earnedGross = elapsedSecs * currentPerSecondRate;
+            const earnedNet = earnedGross * (1 - TAX_DEDUCTION_RATE);
+
+            const liveCounter = document.getElementById('liveCounter');
+            const netDisplay = document.getElementById('netEarningsDisplay');
+            const workedTimeDisplay = document.getElementById('workedTimeDisplay');
+            const progressBar = document.getElementById('shiftProgressBar');
+
+            if (liveCounter) liveCounter.innerText = earnedGross.toFixed(4);
+            if (netDisplay) netDisplay.innerText = `${earnedNet.toFixed(2)} EGP`;
+            if (workedTimeDisplay) workedTimeDisplay.innerText = formatTime(elapsedSecs);
+
+            const targetTotalSecs = SHIFT_PAID_HOURS * 3600;
+            const progressPct = Math.min(100, (elapsedSecs / targetTotalSecs) * 100);
+            if (progressBar) progressBar.style.width = `${progressPct}%`;
+        }
+
+        function formatTime(seconds) {
+            const hrs = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        function updateUI() {
+            const clockBtn = document.getElementById('clockBtn');
+            const breakBtn = document.getElementById('breakBtn');
+            const badge = document.getElementById('shiftStatusBadge');
+            const pulseDot = document.getElementById('pulseDot');
+
+            if (isClockedIn) {
+                if (clockBtn) {
+                    clockBtn.className = "flex-1 min-w-[140px] py-3 px-5 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm transition flex items-center justify-center gap-2";
+                    clockBtn.innerHTML = `<i class="ph-bold ph-stop"></i><span>Clock Out</span>`;
+                }
+                if (breakBtn) {
+                    breakBtn.disabled = false;
+                    breakBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    breakBtn.innerText = isOnBreak ? "Resume Work" : "Take Lunch (45m)";
+                }
+                if (badge) {
+                    badge.innerText = isOnBreak ? "On Lunch Break" : "Clocked In";
+                    badge.className = isOnBreak ? "text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-950 text-amber-400 border border-amber-800" : "text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800";
+                }
+                if (pulseDot) pulseDot.classList.remove('hidden');
+            } else {
+                if (clockBtn) {
+                    clockBtn.className = "flex-1 min-w-[140px] py-3 px-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2";
+                    clockBtn.innerHTML = `<i class="ph-bold ph-play"></i><span>Clock In Shift</span>`;
+                }
+                if (breakBtn) {
+                    breakBtn.disabled = true;
+                    breakBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    breakBtn.innerText = "Take Lunch (45m)";
+                }
+                if (badge) {
+                    badge.innerText = "Clocked Out";
+                    badge.className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-800 text-gray-400";
+                }
+                if (pulseDot) pulseDot.classList.add('hidden');
+            }
+        }
+
+        function saveCurrentState() {
+            const state = {
+                isClockedIn,
+                isOnBreak,
+                startTime,
+                accumulatedTime: isClockedIn && !isOnBreak ? (Date.now() - startTime) : accumulatedTime,
+                probationMode
+            };
+            localStorage.setItem('cnx_shift_state', JSON.stringify(state));
+        }
+
+        function loadSavedState() {
+            try {
+                const state = JSON.parse(localStorage.getItem('cnx_shift_state'));
+                if (state) {
+                    isClockedIn = state.isClockedIn || false;
+                    isOnBreak = state.isOnBreak || false;
+                    probationMode = state.probationMode !== undefined ? state.probationMode : true;
+                    
+                    if (isClockedIn && state.startTime) {
+                        startTime = state.startTime;
+                        startTicker();
+                    }
+                }
+            } catch(e) {}
+        }
+
+        function saveShiftHistory() {
+            localStorage.setItem('cnx_shift_history', JSON.stringify(shiftHistory));
+            if (typeof window.saveDataToCloud === 'function') {
+                window.saveDataToCloud();
+            }
+            renderCalendar();
+        }
+
+        function loadShiftHistory() {
+            try {
+                const stored = localStorage.getItem('cnx_shift_history');
+                if (stored) shiftHistory = JSON.parse(stored);
+            } catch(e) {}
+            renderShiftHistory();
+        }
+
+        function renderShiftHistory() {
+            const list = document.getElementById('historyList');
+            const lifetimeEl = document.getElementById('headerLifetimeTotal');
+            if (!list) return;
+
+            let lifetimeTotal = 0;
+            if (shiftHistory.length === 0) {
+                list.innerHTML = `<div class="text-xs text-gray-500 text-center py-4">No completed shifts recorded yet. Clock out a shift to start history logging.</div>`;
+            } else {
+                let html = '';
+                shiftHistory.forEach(s => {
+                    lifetimeTotal += parseFloat(s.gross || 0);
+                    html += `
+                        <div class="flex items-center justify-between p-3 rounded-2xl bg-gray-950 border border-gray-800 text-xs">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-xl bg-emerald-950 text-emerald-400 flex items-center justify-center font-bold">
+                                    <i class="ph-bold ph-check"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-white">${s.date} <span class="text-gray-500 font-normal">(${s.time})</span></div>
+                                    <div class="text-[11px] text-gray-400">Duration: ${s.duration}</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold font-mono text-emerald-400">+${s.gross} EGP</div>
+                                <div class="text-[10px] text-cyan-400 font-mono">Net ~${s.net} EGP</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                list.innerHTML = html;
+            }
+
+            if (lifetimeEl) lifetimeEl.innerText = `${lifetimeTotal.toFixed(2)} EGP`;
+        }
+
+        function clearHistory() {
+            if (confirm("Are you sure you want to clear your shift history?")) {
+                shiftHistory = [];
+                saveShiftHistory();
+                renderShiftHistory();
+                renderCalendar();
+            }
+        }
+
+        function renderCalendar() {
+            const daysGrid = document.getElementById('calendarDaysGrid');
+            const monthLabel = document.getElementById('calendarMonthLabel');
+            if (!daysGrid || !monthLabel) return;
+
+            const year = currentDateView.getFullYear();
+            const month = currentDateView.getMonth();
+
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            monthLabel.innerText = `${monthNames[month]} ${year}`;
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const totalDays = lastDay.getDate();
+            
+            let startDayIndex = firstDay.getDay() - 1;
+            if (startDayIndex === -1) startDayIndex = 6;
+
+            let gridHtml = '';
+
+            for (let i = 0; i < startDayIndex; i++) {
+                gridHtml += `<div class="h-14 rounded-xl bg-gray-950/40 border border-gray-900"></div>`;
+            }
+
+            let monthGrossTotal = 0;
+            let monthNetTotal = 0;
+            let monthShiftsCount = 0;
+
+            const today = new Date();
+
+            for (let day = 1; day <= totalDays; day++) {
+                const dateObj = new Date(year, month, day);
+                const dateStr = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+                const dayShifts = shiftHistory.filter(s => s.date && s.date.includes(dateStr));
+                let dayEarned = 0;
+                dayShifts.forEach(s => dayEarned += parseFloat(s.gross || 0));
+
+                if (dayEarned > 0) {
+                    monthShiftsCount++;
+                    monthGrossTotal += dayEarned;
+                    monthNetTotal += dayEarned * (1 - TAX_DEDUCTION_RATE);
+                }
+
+                const isToday = (today.getDate() === day && today.getMonth() === month && today.getFullYear() === year);
+
+                gridHtml += `
+                    <div class="h-14 rounded-xl p-1.5 flex flex-col justify-between border ${isToday ? 'border-cyan-500 bg-cyan-950/30' : dayEarned > 0 ? 'border-emerald-800/80 bg-emerald-950/30' : 'border-gray-800 bg-gray-950/80'} transition">
+                        <div class="flex justify-between items-center text-[10px]">
+                            <span class="font-bold ${isToday ? 'text-cyan-400' : 'text-gray-400'}">${day}</span>
+                            ${dayEarned > 0 ? `<i class="ph-bold ph-check-circle text-emerald-400"></i>` : ''}
+                        </div>
+                        <div class="text-right">
+                            ${dayEarned > 0 ? `
+                                <div class="font-mono font-bold text-emerald-400 text-[10px]">${dayEarned.toFixed(0)}</div>
+                                <div class="text-[8px] text-gray-500 font-sans">EGP</div>
+                            ` : `<div class="text-[9px] text-gray-700 font-sans italic">Off</div>`}
+                        </div>
+                    </div>
+                `;
+            }
+
+            daysGrid.innerHTML = gridHtml;
+
+            const elShifts = document.getElementById('calStatShifts');
+            const elGross = document.getElementById('calStatGross');
+            const elNet = document.getElementById('calStatNet');
+
+            if (elShifts) elShifts.innerText = monthShiftsCount;
+            if (elGross) elGross.innerText = `${monthGrossTotal.toFixed(2)} EGP`;
+            if (elNet) elNet.innerText = `${monthNetTotal.toFixed(2)} EGP`;
+        }
+
+        function changeMonth(delta) {
+            currentDateView.setMonth(currentDateView.getMonth() + delta);
+            renderCalendar();
+        }
+
+        function showInstallHelp() {
+            const modal = document.getElementById('installModal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeInstallModal() {
+            const modal = document.getElementById('installModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        window.onload = function() {
+            // Version Check Guard: Retain user shift history across updates!
+            const lastVersion = localStorage.getItem('cnx_app_version');
+            if (lastVersion !== APP_VERSION) {
+                localStorage.setItem('cnx_app_version', APP_VERSION);
+                console.log(`App updated smoothly to version ${APP_VERSION}. All shift history preserved!`);
+            }
+
+            loadSavedState();
+            recalculateRates();
+            loadShiftHistory();
+            renderCalendar();
+            updateUI();
+        };
+<!-- ... existing code -->
