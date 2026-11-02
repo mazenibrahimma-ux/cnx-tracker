@@ -120,15 +120,15 @@
     <!-- Navigation Tabs Bar (Mobile Optimized) -->
     <div class="bg-gray-900 border-b border-gray-800 px-4 py-2 sticky top-[61px] z-30">
         <div class="max-w-4xl mx-auto flex items-center justify-center gap-2 sm:gap-4 text-xs font-semibold">
-            <button onclick="switchTab('live')" id="tab-btn-live" class="tab-btn tab-active flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition">
+            <button onclick="window.switchTab('live')" id="tab-btn-live" class="tab-btn tab-active flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition">
                 <i class="ph-bold ph-lightning text-base"></i>
                 <span>Live Shift</span>
             </button>
-            <button onclick="switchTab('calendar')" id="tab-btn-calendar" class="tab-btn text-gray-400 hover:text-white flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition">
+            <button onclick="window.switchTab('calendar')" id="tab-btn-calendar" class="tab-btn text-gray-400 hover:text-white flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition">
                 <i class="ph-bold ph-calendar text-base"></i>
                 <span>Calendar</span>
             </button>
-            <button onclick="switchTab('settings')" id="tab-btn-settings" class="tab-btn text-gray-400 hover:text-white flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition">
+            <button onclick="window.switchTab('settings')" id="tab-btn-settings" class="tab-btn text-gray-400 hover:text-white flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition">
                 <i class="ph-bold ph-sliders text-base"></i>
                 <span>Pay & Log</span>
             </button>
@@ -371,25 +371,29 @@
             <div class="bg-gray-950 p-4 rounded-2xl border border-gray-800 space-y-3 text-xs">
                 <div class="flex justify-between items-center">
                     <span class="text-gray-400">Sync Status:</span>
-                    <span id="modalCloudStatus" class="font-bold text-cyan-400 flex items-center gap-1">
-                        <i class="ph-bold ph-check-circle"></i> Connected
+                    <span id="modalCloudStatus" class="font-bold text-emerald-400 flex items-center gap-1">
+                        <i class="ph-bold ph-check-circle"></i> Local Storage Active
                     </span>
                 </div>
                 <div class="flex justify-between items-center">
-                    <span class="text-gray-400">Your Anonymous Device Key:</span>
-                    <span id="userKeyDisplay" class="font-mono text-white text-[11px] truncate max-w-[150px]">Loading...</span>
+                    <span class="text-gray-400">Your Device Sync ID:</span>
+                    <span id="userKeyDisplay" class="font-mono text-cyan-300 font-bold text-xs">CNX-LOCAL-DEVICE</span>
                 </div>
             </div>
 
             <div class="space-y-2">
-                <label class="text-xs font-semibold text-gray-300">Pair this device on PC / Second Phone:</label>
+                <label class="text-xs font-semibold text-gray-300">Sync & Backup Shift Data:</label>
                 <div class="flex items-center gap-2">
                     <input id="shareUrlInput" readonly type="text" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-xs text-gray-300 font-mono focus:outline-none">
                     <button onclick="copyShareUrl()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-black font-bold text-xs rounded-xl transition flex items-center gap-1">
                         <i class="ph-bold ph-copy"></i> Copy
                     </button>
                 </div>
-                <p class="text-[11px] text-gray-500">Open this link on any device to mirror your shift status and calendar instantly!</p>
+                <div class="flex gap-2 pt-2">
+                    <button onclick="exportData()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs transition">Export Data</button>
+                    <button onclick="importData()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-cyan-400 rounded-xl font-bold text-xs transition">Import Data</button>
+                </div>
+                <p class="text-[11px] text-gray-500">Your data is safely stored on this phone. Use Export/Import to transfer shifts to PC!</p>
             </div>
         </div>
     </div>
@@ -425,12 +429,11 @@
 
             <div id="androidInstallGuide" class="space-y-3 text-xs bg-gray-950 p-4 rounded-2xl border border-gray-800">
                 <div class="font-bold text-emerald-400 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
-                    <i class="ph-bold ph-android-logo text-sm"></i> Android Chrome Instructions
+                    <i class="ph-bold ph-android-logo text-sm"></i> Android Instructions (Local File Mode)
                 </div>
                 <ol class="space-y-2.5 text-gray-300 list-decimal list-inside">
-                    <li>Tap the <strong class="text-white">Menu Options (3 Dots)</strong> <i class="ph-bold ph-dots-three-vertical text-emerald-400 text-sm"></i> top right.</li>
-                    <li>Select <strong class="text-white">'Add to Home screen'</strong> or <strong class="text-white">'Install app'</strong>.</li>
-                    <li>Confirm by tapping <strong class="text-white">'Add'</strong>.</li>
+                    <li>Tap <strong class="text-white">'Share...'</strong> in Chrome menu -> tap <strong class="text-white">'Add to Home screen'</strong>.</li>
+                    <li>OR open your phone's <strong class="text-white">'My Files'</strong> app -> long-press this HTML file -> tap <strong class="text-white">'Add shortcut to Home screen'</strong>.</li>
                 </ol>
             </div>
 
@@ -440,142 +443,80 @@
         </div>
     </div>
 
-    <!-- Firebase Imports for Cloud Storage -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'concentrix-shift-tracker-app';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "demo-api-key",
-            authDomain: "demo-app.firebaseapp.com",
-            projectId: "demo-app",
-            storageBucket: "demo-app.appspot.com",
-            messagingSenderId: "000000000000",
-            appId: "1:000000000000:web:000000000000"
-        };
-
-        let app, db, auth, user;
-
-        try {
-            app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-
-            const initAuth = async () => {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            };
-
-            onAuthStateChanged(auth, (u) => {
-                if (u) {
-                    user = u;
-                    const keyEl = document.getElementById('userKeyDisplay');
-                    const urlInput = document.getElementById('shareUrlInput');
-                    if (keyEl) keyEl.innerText = user.uid;
-                    if (urlInput) urlInput.value = window.location.href;
-                    setupCloudListeners();
-                } else {
-                    initAuth().catch(err => console.log("Cloud auth offline, running local-only"));
-                }
-            });
-        } catch(e) {
-            console.log("Firebase setup skipped, using local storage mode", e);
-        }
-
-        window.saveDataToCloud = async function() {
-            if (!db || !user) return;
-            const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'user_data', 'shift_tracker_state');
-            try {
-                await setDoc(docRef, {
-                    shiftHistory: window.shiftHistory || [],
-                    lastUpdated: Date.now()
-                }, { merge: true });
-                updateCloudBadge(true);
-            } catch(e) {
-                console.error("Error saving to cloud", e);
-                updateCloudBadge(false);
-            }
-        };
-
-        function setupCloudListeners() {
-            if (!db || !user) return;
-            const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'user_data', 'shift_tracker_state');
-            
-            onSnapshot(docRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    if (data.shiftHistory && Array.isArray(data.shiftHistory)) {
-                        if (data.shiftHistory.length >= (window.shiftHistory || []).length) {
-                            window.shiftHistory = data.shiftHistory;
-                            localStorage.setItem('cnx_shift_history', JSON.stringify(window.shiftHistory));
-                            if (typeof window.renderShiftHistory === 'function') window.renderShiftHistory();
-                            if (typeof window.renderCalendar === 'function') window.renderCalendar();
-                        }
-                    }
-                }
-                updateCloudBadge(true);
-            }, (error) => {
-                console.log("Cloud listener notice:", error);
-                updateCloudBadge(false);
-            });
-        }
-
-        function updateCloudBadge(online) {
-            const icon = document.getElementById('cloudIcon');
-            const txt = document.getElementById('cloudStatusText');
-            const modalStatus = document.getElementById('modalCloudStatus');
-            if (icon && txt) {
-                if (online) {
-                    icon.className = "ph-bold ph-cloud-check text-cyan-400 text-sm";
-                    txt.innerText = "Cloud Active";
-                    if (modalStatus) modalStatus.innerHTML = `<i class="ph-bold ph-check-circle"></i> Connected`;
-                } else {
-                    icon.className = "ph-bold ph-cloud-slash text-gray-500 text-sm";
-                    txt.innerText = "Local Mode";
-                    if (modalStatus) modalStatus.innerHTML = `<i class="ph-bold ph-warning text-amber-400"></i> Local Storage`;
-                }
-            }
-        }
-    </script>
-
-    <!-- Global Application JS Code -->
+    <!-- Pure Local Vanilla JS Engine (Offline Compatible, No Module Errors when opening content:// URIs) -->
     <script>
-        const APP_VERSION = "1.2.0";
+        const APP_VERSION = "1.2.3";
         const NIGHT_ALLOWANCE_PER_HOUR = 6.85;
         const TAX_DEDUCTION_RATE = 0.15;
         const SHIFT_PAID_HOURS = 8.25;
 
-        let isClockedIn = false;
-        let isOnBreak = false;
-        let probationMode = true;
-        let startTime = null;
-        let accumulatedTime = 0;
-        let breakStartTime = null;
-        let animFrameId = null;
+        window.isClockedIn = false;
+        window.isOnBreak = false;
+        window.probationMode = true;
+        window.startTime = null;
+        window.accumulatedTime = 0;
+        window.breakStartTime = null;
+        window.animFrameId = null;
+        window.deviceId = "";
 
-        let baseMonthlyPackage = 15625;
-        let kpiBonusMax = 3250;
-        let kpiPercent = 0;
-        let currentHourlyRate = 0;
-        let currentPerSecondRate = 0;
+        window.baseMonthlyPackage = 15625;
+        window.kpiBonusMax = 3250;
+        window.kpiPercent = 0;
+        window.currentHourlyRate = 0;
+        window.currentPerSecondRate = 0;
 
         window.shiftHistory = [];
-        let currentDateView = new Date();
+        window.currentDateView = new Date();
 
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(el => {
+        window.initDeviceId = function() {
+            let id = localStorage.getItem('cnx_device_id');
+            if (!id) {
+                id = 'CNX-' + Math.floor(1000 + Math.random() * 9000);
+                localStorage.setItem('cnx_device_id', id);
+            }
+            window.deviceId = id;
+            const elKey = document.getElementById('userKeyDisplay');
+            const elInput = document.getElementById('shareUrlInput');
+            if (elKey) elKey.innerText = window.deviceId;
+            if (elInput) elInput.value = window.deviceId + '-BACKUP';
+        };
+
+        window.exportData = function() {
+            const backup = {
+                history: window.shiftHistory,
+                probation: window.probationMode
+            };
+            const str = btoa(JSON.stringify(backup));
+            prompt("Copy this export code to transfer your data:", str);
+        };
+
+        window.importData = function() {
+            const str = prompt("Paste your export code here:");
+            if (str) {
+                try {
+                    const data = JSON.parse(atob(str));
+                    if (data && data.history) {
+                        window.shiftHistory = data.history;
+                        window.saveShiftHistory();
+                        window.renderShiftHistory();
+                        window.renderCalendar();
+                        alert("Data imported successfully!");
+                    }
+                } catch(e) {
+                    alert("Invalid backup code!");
+                }
+            }
+        };
+
+        window.switchTab = function(tabName) {
+            document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.add('hidden'); });
+            document.querySelectorAll('.tab-btn').forEach(function(el) {
                 el.classList.remove('tab-active', 'text-cyan-400');
                 el.classList.add('text-gray-400');
             });
 
-            const targetContent = document.getElementById(`tab-content-${tabName}`);
-            const targetBtn = document.getElementById(`tab-btn-${tabName}`);
+            const targetContent = document.getElementById('tab-content-' + tabName);
+            const targetBtn = document.getElementById('tab-btn-' + tabName);
 
             if (targetContent) targetContent.classList.remove('hidden');
             if (targetBtn) {
@@ -583,36 +524,36 @@
                 targetBtn.classList.remove('text-gray-400');
             }
 
-            if (tabName === 'calendar') renderCalendar();
-            if (tabName === 'settings') renderShiftHistory();
-        }
+            if (tabName === 'calendar') window.renderCalendar();
+            if (tabName === 'settings') window.renderShiftHistory();
+        };
 
-        function openCloudModal() {
+        window.openCloudModal = function() {
             const modal = document.getElementById('cloudModal');
             if (modal) modal.classList.remove('hidden');
-        }
+        };
 
-        function closeCloudModal() {
+        window.closeCloudModal = function() {
             const modal = document.getElementById('cloudModal');
             if (modal) modal.classList.add('hidden');
-        }
+        };
 
-        function copyShareUrl() {
+        window.copyShareUrl = function() {
             const input = document.getElementById('shareUrlInput');
             if (input) {
                 input.select();
                 document.execCommand('copy');
-                alert("Cloud Sync Link copied to clipboard! Open it on your PC or second phone to pair devices.");
+                alert("Link copied! Open on another device to sync.");
             }
-        }
+        };
 
-        function toggleProbationMode() {
-            probationMode = !probationMode;
+        window.toggleProbationMode = function() {
+            window.probationMode = !window.probationMode;
             const btn = document.getElementById('probationToggleBtn');
             const slider = document.getElementById('kpiSlider');
             const statusTxt = document.getElementById('probationStatusText');
 
-            if (probationMode) {
+            if (window.probationMode) {
                 if (btn) btn.className = "px-3 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 bg-emerald-950 border border-emerald-700 text-emerald-300";
                 if (statusTxt) statusTxt.innerText = "First 3 Months (Base 15,625 EGP)";
                 if (slider) {
@@ -627,29 +568,29 @@
                     slider.classList.remove('opacity-50', 'cursor-not-allowed');
                 }
             }
-            recalculateRates();
-        }
+            window.recalculateRates();
+        };
 
-        function recalculateRates() {
+        window.recalculateRates = function() {
             const pkgSelect = document.getElementById('packageSelect');
             const kpiSlider = document.getElementById('kpiSlider');
             const kpiTxt = document.getElementById('kpiValueText');
 
-            if (pkgSelect) baseMonthlyPackage = parseFloat(pkgSelect.value) || 15625;
+            if (pkgSelect) window.baseMonthlyPackage = parseFloat(pkgSelect.value) || 15625;
             
             if (kpiSlider && kpiTxt) {
-                kpiPercent = probationMode ? 0 : parseFloat(kpiSlider.value) || 0;
-                kpiTxt.innerText = `${kpiPercent}%`;
+                window.kpiPercent = window.probationMode ? 0 : parseFloat(kpiSlider.value) || 0;
+                kpiTxt.innerText = window.kpiPercent + '%';
             }
 
-            const totalMonthly = baseMonthlyPackage + (probationMode ? 0 : (kpiBonusMax * (kpiPercent / 100)));
+            const totalMonthly = window.baseMonthlyPackage + (window.probationMode ? 0 : (window.kpiBonusMax * (window.kpiPercent / 100)));
             const dailyRate = totalMonthly / 22;
-            currentHourlyRate = dailyRate / SHIFT_PAID_HOURS;
+            window.currentHourlyRate = dailyRate / SHIFT_PAID_HOURS;
 
             const shiftTimingSelect = document.getElementById('shiftTimingSelect');
             const nightBadge = document.getElementById('nightStatusBadge');
             
-            let effectiveHourlyRate = currentHourlyRate;
+            let effectiveHourlyRate = window.currentHourlyRate;
             if (shiftTimingSelect && shiftTimingSelect.value === 'night') {
                 effectiveHourlyRate += NIGHT_ALLOWANCE_PER_HOUR;
                 if (nightBadge) nightBadge.classList.remove('hidden');
@@ -657,108 +598,108 @@
                 if (nightBadge) nightBadge.classList.add('hidden');
             }
 
-            currentPerSecondRate = effectiveHourlyRate / 3600;
+            window.currentPerSecondRate = effectiveHourlyRate / 3600;
 
             const elRateHr = document.getElementById('ratePerHour');
             const elRateMin = document.getElementById('ratePerMinute');
             const elGoal = document.getElementById('shiftGoalText');
 
-            if (elRateHr) elRateHr.innerText = `${effectiveHourlyRate.toFixed(2)} EGP/h`;
-            if (elRateMin) elRateMin.innerText = `${(effectiveHourlyRate / 60).toFixed(2)} EGP/m`;
-            if (elGoal) elGoal.innerText = `${(effectiveHourlyRate * SHIFT_PAID_HOURS).toFixed(2)} EGP`;
+            if (elRateHr) elRateHr.innerText = effectiveHourlyRate.toFixed(2) + ' EGP/h';
+            if (elRateMin) elRateMin.innerText = (effectiveHourlyRate / 60).toFixed(2) + ' EGP/m';
+            if (elGoal) elGoal.innerText = (effectiveHourlyRate * SHIFT_PAID_HOURS).toFixed(2) + ' EGP';
 
-            updateDisplay();
-        }
+            window.updateDisplay();
+        };
 
-        function toggleClock() {
-            if (!isClockedIn) {
-                isClockedIn = true;
-                isOnBreak = false;
-                startTime = Date.now() - accumulatedTime;
-                startTicker();
+        window.toggleClock = function() {
+            if (!window.isClockedIn) {
+                window.isClockedIn = true;
+                window.isOnBreak = false;
+                window.startTime = Date.now() - window.accumulatedTime;
+                window.startTicker();
             } else {
-                clockOutShift();
+                window.clockOutShift();
             }
-            saveCurrentState();
-            updateUI();
-        }
+            window.saveCurrentState();
+            window.updateUI();
+        };
 
-        function toggleBreak() {
-            if (!isClockedIn) return;
-            isOnBreak = !isOnBreak;
+        window.toggleBreak = function() {
+            if (!window.isClockedIn) return;
+            window.isOnBreak = !window.isOnBreak;
 
-            if (isOnBreak) {
-                breakStartTime = Date.now();
+            if (window.isOnBreak) {
+                window.breakStartTime = Date.now();
             } else {
-                if (breakStartTime) {
-                    breakStartTime = null;
+                if (window.breakStartTime) {
+                    window.breakStartTime = null;
                 }
             }
-            saveCurrentState();
-            updateUI();
-        }
+            window.saveCurrentState();
+            window.updateUI();
+        };
 
-        function clockOutShift() {
-            if (!isClockedIn) return;
+        window.clockOutShift = function() {
+            if (!window.isClockedIn) return;
 
-            const elapsedSecs = getActiveElapsedSeconds();
-            const earnedGross = elapsedSecs * currentPerSecondRate;
+            const elapsedSecs = window.getActiveElapsedSeconds();
+            const earnedGross = elapsedSecs * window.currentPerSecondRate;
             const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
-            if (earnedGross > 5) {
-                shiftHistory.unshift({
+            if (earnedGross > 2) {
+                window.shiftHistory.unshift({
                     id: Date.now(),
                     date: dateStr,
                     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    duration: formatTime(elapsedSecs),
+                    duration: window.formatTime(elapsedSecs),
                     gross: earnedGross.toFixed(2),
                     net: (earnedGross * (1 - TAX_DEDUCTION_RATE)).toFixed(2)
                 });
-                saveShiftHistory();
+                window.saveShiftHistory();
             }
 
-            isClockedIn = false;
-            isOnBreak = false;
-            accumulatedTime = 0;
-            startTime = null;
-            cancelAnimationFrame(animFrameId);
-            saveCurrentState();
-            updateUI();
-            renderShiftHistory();
-            renderCalendar();
-        }
+            window.isClockedIn = false;
+            window.isOnBreak = false;
+            window.accumulatedTime = 0;
+            window.startTime = null;
+            cancelAnimationFrame(window.animFrameId);
+            window.saveCurrentState();
+            window.updateUI();
+            window.renderShiftHistory();
+            window.renderCalendar();
+        };
 
-        function resetShift() {
-            isClockedIn = false;
-            isOnBreak = false;
-            accumulatedTime = 0;
-            startTime = null;
-            cancelAnimationFrame(animFrameId);
-            saveCurrentState();
-            updateUI();
-            updateDisplay();
-        }
+        window.resetShift = function() {
+            window.isClockedIn = false;
+            window.isOnBreak = false;
+            window.accumulatedTime = 0;
+            window.startTime = null;
+            cancelAnimationFrame(window.animFrameId);
+            window.saveCurrentState();
+            window.updateUI();
+            window.updateDisplay();
+        };
 
-        function startTicker() {
-            cancelAnimationFrame(animFrameId);
+        window.startTicker = function() {
+            cancelAnimationFrame(window.animFrameId);
             function tick() {
-                if (isClockedIn) {
-                    updateDisplay();
-                    animFrameId = requestAnimationFrame(tick);
+                if (window.isClockedIn) {
+                    window.updateDisplay();
+                    window.animFrameId = requestAnimationFrame(tick);
                 }
             }
-            animFrameId = requestAnimationFrame(tick);
-        }
+            window.animFrameId = requestAnimationFrame(tick);
+        };
 
-        function getActiveElapsedSeconds() {
-            if (!isClockedIn || !startTime) return accumulatedTime / 1000;
-            if (isOnBreak) return accumulatedTime / 1000;
-            return (Date.now() - startTime) / 1000;
-        }
+        window.getActiveElapsedSeconds = function() {
+            if (!window.isClockedIn || !window.startTime) return window.accumulatedTime / 1000;
+            if (window.isOnBreak) return window.accumulatedTime / 1000;
+            return (Date.now() - window.startTime) / 1000;
+        };
 
-        function updateDisplay() {
-            const elapsedSecs = getActiveElapsedSeconds();
-            const earnedGross = elapsedSecs * currentPerSecondRate;
+        window.updateDisplay = function() {
+            const elapsedSecs = window.getActiveElapsedSeconds();
+            const earnedGross = elapsedSecs * window.currentPerSecondRate;
             const earnedNet = earnedGross * (1 - TAX_DEDUCTION_RATE);
 
             const liveCounter = document.getElementById('liveCounter');
@@ -767,46 +708,46 @@
             const progressBar = document.getElementById('shiftProgressBar');
 
             if (liveCounter) liveCounter.innerText = earnedGross.toFixed(4);
-            if (netDisplay) netDisplay.innerText = `${earnedNet.toFixed(2)} EGP`;
-            if (workedTimeDisplay) workedTimeDisplay.innerText = formatTime(elapsedSecs);
+            if (netDisplay) netDisplay.innerText = earnedNet.toFixed(2) + ' EGP';
+            if (workedTimeDisplay) workedTimeDisplay.innerText = window.formatTime(elapsedSecs);
 
             const targetTotalSecs = SHIFT_PAID_HOURS * 3600;
             const progressPct = Math.min(100, (elapsedSecs / targetTotalSecs) * 100);
-            if (progressBar) progressBar.style.width = `${progressPct}%`;
-        }
+            if (progressBar) progressBar.style.width = progressPct + '%';
+        };
 
-        function formatTime(seconds) {
+        window.formatTime = function(seconds) {
             const hrs = Math.floor(seconds / 3600);
             const mins = Math.floor((seconds % 3600) / 60);
             const secs = Math.floor(seconds % 60);
-            return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-        }
+            return String(hrs).padStart(2, '0') + ':' + String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+        };
 
-        function updateUI() {
+        window.updateUI = function() {
             const clockBtn = document.getElementById('clockBtn');
             const breakBtn = document.getElementById('breakBtn');
             const badge = document.getElementById('shiftStatusBadge');
             const pulseDot = document.getElementById('pulseDot');
 
-            if (isClockedIn) {
+            if (window.isClockedIn) {
                 if (clockBtn) {
                     clockBtn.className = "flex-1 min-w-[140px] py-3 px-5 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm transition flex items-center justify-center gap-2";
-                    clockBtn.innerHTML = `<i class="ph-bold ph-stop"></i><span>Clock Out</span>`;
+                    clockBtn.innerHTML = '<i class="ph-bold ph-stop"></i><span>Clock Out</span>';
                 }
                 if (breakBtn) {
                     breakBtn.disabled = false;
                     breakBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    breakBtn.innerText = isOnBreak ? "Resume Work" : "Take Lunch (45m)";
+                    breakBtn.innerText = window.isOnBreak ? "Resume Work" : "Take Lunch (45m)";
                 }
                 if (badge) {
-                    badge.innerText = isOnBreak ? "On Lunch Break" : "Clocked In";
-                    badge.className = isOnBreak ? "text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-950 text-amber-400 border border-amber-800" : "text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800";
+                    badge.innerText = window.isOnBreak ? "On Lunch Break" : "Clocked In";
+                    badge.className = window.isOnBreak ? "text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-950 text-amber-400 border border-amber-800" : "text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800";
                 }
                 if (pulseDot) pulseDot.classList.remove('hidden');
             } else {
                 if (clockBtn) {
                     clockBtn.className = "flex-1 min-w-[140px] py-3 px-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2";
-                    clockBtn.innerHTML = `<i class="ph-bold ph-play"></i><span>Clock In Shift</span>`;
+                    clockBtn.innerHTML = '<i class="ph-bold ph-play"></i><span>Clock In Shift</span>';
                 }
                 if (breakBtn) {
                     breakBtn.disabled = true;
@@ -819,106 +760,101 @@
                 }
                 if (pulseDot) pulseDot.classList.add('hidden');
             }
-        }
+        };
 
-        function saveCurrentState() {
+        window.saveCurrentState = function() {
             const state = {
-                isClockedIn,
-                isOnBreak,
-                startTime,
-                accumulatedTime: isClockedIn && !isOnBreak ? (Date.now() - startTime) : accumulatedTime,
-                probationMode
+                isClockedIn: window.isClockedIn,
+                isOnBreak: window.isOnBreak,
+                startTime: window.startTime,
+                accumulatedTime: window.isClockedIn && !window.isOnBreak ? (Date.now() - window.startTime) : window.accumulatedTime,
+                probationMode: window.probationMode
             };
             localStorage.setItem('cnx_shift_state', JSON.stringify(state));
-        }
+        };
 
-        function loadSavedState() {
+        window.loadSavedState = function() {
             try {
                 const state = JSON.parse(localStorage.getItem('cnx_shift_state'));
                 if (state) {
-                    isClockedIn = state.isClockedIn || false;
-                    isOnBreak = state.isOnBreak || false;
-                    probationMode = state.probationMode !== undefined ? state.probationMode : true;
+                    window.isClockedIn = state.isClockedIn || false;
+                    window.isOnBreak = state.isOnBreak || false;
+                    window.probationMode = state.probationMode !== undefined ? state.probationMode : true;
                     
-                    if (isClockedIn && state.startTime) {
-                        startTime = state.startTime;
-                        startTicker();
+                    if (window.isClockedIn && state.startTime) {
+                        window.startTime = state.startTime;
+                        window.startTicker();
                     }
                 }
             } catch(e) {}
-        }
+        };
 
-        function saveShiftHistory() {
-            localStorage.setItem('cnx_shift_history', JSON.stringify(shiftHistory));
-            if (typeof window.saveDataToCloud === 'function') {
-                window.saveDataToCloud();
-            }
-            renderCalendar();
-        }
+        window.saveShiftHistory = function() {
+            localStorage.setItem('cnx_shift_history', JSON.stringify(window.shiftHistory));
+            window.renderCalendar();
+        };
 
-        function loadShiftHistory() {
+        window.loadShiftHistory = function() {
             try {
                 const stored = localStorage.getItem('cnx_shift_history');
-                if (stored) shiftHistory = JSON.parse(stored);
+                if (stored) window.shiftHistory = JSON.parse(stored);
             } catch(e) {}
-            renderShiftHistory();
-        }
+            window.renderShiftHistory();
+        };
 
-        function renderShiftHistory() {
+        window.renderShiftHistory = function() {
             const list = document.getElementById('historyList');
             const lifetimeEl = document.getElementById('headerLifetimeTotal');
             if (!list) return;
 
             let lifetimeTotal = 0;
-            if (shiftHistory.length === 0) {
-                list.innerHTML = `<div class="text-xs text-gray-500 text-center py-4">No completed shifts recorded yet. Clock out a shift to start history logging.</div>`;
+            if (window.shiftHistory.length === 0) {
+                list.innerHTML = '<div class="text-xs text-gray-500 text-center py-4">No completed shifts recorded yet. Clock out a shift to start history logging.</div>';
             } else {
                 let html = '';
-                shiftHistory.forEach(s => {
+                window.shiftHistory.forEach(function(s) {
                     lifetimeTotal += parseFloat(s.gross || 0);
-                    html += `
-                        <div class="flex items-center justify-between p-3 rounded-2xl bg-gray-950 border border-gray-800 text-xs">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-xl bg-emerald-950 text-emerald-400 flex items-center justify-center font-bold">
-                                    <i class="ph-bold ph-check"></i>
-                                </div>
-                                <div>
-                                    <div class="font-bold text-white">${s.date} <span class="text-gray-500 font-normal">(${s.time})</span></div>
-                                    <div class="text-[11px] text-gray-400">Duration: ${s.duration}</div>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <div class="font-bold font-mono text-emerald-400">+${s.gross} EGP</div>
-                                <div class="text-[10px] text-cyan-400 font-mono">Net ~${s.net} EGP</div>
-                            </div>
-                        </div>
-                    `;
+                    html += '<div class="flex items-center justify-between p-3 rounded-2xl bg-gray-950 border border-gray-800 text-xs">' +
+                        '<div class="flex items-center gap-3">' +
+                            '<div class="w-8 h-8 rounded-xl bg-emerald-950 text-emerald-400 flex items-center justify-center font-bold">' +
+                                '<i class="ph-bold ph-check"></i>' +
+                            '</div>' +
+                            '<div>' +
+                                '<div class="font-bold text-white">' + s.date + ' <span class="text-gray-500 font-normal">(' + s.time + ')</span></div>' +
+                                '<div class="text-[11px] text-gray-400">Duration: ' + s.duration + '</div>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="text-right">' +
+                            '<div class="font-bold font-mono text-emerald-400">+' + s.gross + ' EGP</div>' +
+                            '<div class="text-[10px] text-cyan-400 font-mono">Net ~' + s.net + ' EGP</div>' +
+                        '</div>' +
+                    '</div>';
                 });
                 list.innerHTML = html;
             }
 
-            if (lifetimeEl) lifetimeEl.innerText = `${lifetimeTotal.toFixed(2)} EGP`;
-        }
+            if (lifetimeEl) lifetimeEl.innerText = lifetimeTotal.toFixed(2) + ' EGP';
+        };
 
-        function clearHistory() {
+        window.clearHistory = function() {
             if (confirm("Are you sure you want to clear your shift history?")) {
-                shiftHistory = [];
-                saveShiftHistory();
-                renderShiftHistory();
-                renderCalendar();
+                window.shiftHistory = [];
+                window.saveShiftHistory();
+                window.renderShiftHistory();
+                window.renderCalendar();
             }
-        }
+        };
 
-        function renderCalendar() {
+        window.renderCalendar = function() {
             const daysGrid = document.getElementById('calendarDaysGrid');
             const monthLabel = document.getElementById('calendarMonthLabel');
             if (!daysGrid || !monthLabel) return;
 
-            const year = currentDateView.getFullYear();
-            const month = currentDateView.getMonth();
+            const year = window.currentDateView.getFullYear();
+            const month = window.currentDateView.getMonth();
 
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            monthLabel.innerText = `${monthNames[month]} ${year}`;
+            monthLabel.innerText = monthNames[month] + ' ' + year;
 
             const firstDay = new Date(year, month, 1);
             const lastDay = new Date(year, month + 1, 0);
@@ -930,7 +866,7 @@
             let gridHtml = '';
 
             for (let i = 0; i < startDayIndex; i++) {
-                gridHtml += `<div class="h-14 rounded-xl bg-gray-950/40 border border-gray-900"></div>`;
+                gridHtml += '<div class="h-14 rounded-xl bg-gray-950/40 border border-gray-900"></div>';
             }
 
             let monthGrossTotal = 0;
@@ -943,9 +879,9 @@
                 const dateObj = new Date(year, month, day);
                 const dateStr = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
-                const dayShifts = shiftHistory.filter(s => s.date && s.date.includes(dateStr));
+                const dayShifts = window.shiftHistory.filter(function(s) { return s.date && s.date.includes(dateStr); });
                 let dayEarned = 0;
-                dayShifts.forEach(s => dayEarned += parseFloat(s.gross || 0));
+                dayShifts.forEach(function(s) { dayEarned += parseFloat(s.gross || 0); });
 
                 if (dayEarned > 0) {
                     monthShiftsCount++;
@@ -955,20 +891,15 @@
 
                 const isToday = (today.getDate() === day && today.getMonth() === month && today.getFullYear() === year);
 
-                gridHtml += `
-                    <div class="h-14 rounded-xl p-1.5 flex flex-col justify-between border ${isToday ? 'border-cyan-500 bg-cyan-950/30' : dayEarned > 0 ? 'border-emerald-800/80 bg-emerald-950/30' : 'border-gray-800 bg-gray-950/80'} transition">
-                        <div class="flex justify-between items-center text-[10px]">
-                            <span class="font-bold ${isToday ? 'text-cyan-400' : 'text-gray-400'}">${day}</span>
-                            ${dayEarned > 0 ? `<i class="ph-bold ph-check-circle text-emerald-400"></i>` : ''}
-                        </div>
-                        <div class="text-right">
-                            ${dayEarned > 0 ? `
-                                <div class="font-mono font-bold text-emerald-400 text-[10px]">${dayEarned.toFixed(0)}</div>
-                                <div class="text-[8px] text-gray-500 font-sans">EGP</div>
-                            ` : `<div class="text-[9px] text-gray-700 font-sans italic">Off</div>`}
-                        </div>
-                    </div>
-                `;
+                gridHtml += '<div class="h-14 rounded-xl p-1.5 flex flex-col justify-between border ' + (isToday ? 'border-cyan-500 bg-cyan-950/30' : dayEarned > 0 ? 'border-emerald-800/80 bg-emerald-950/30' : 'border-gray-800 bg-gray-950/80') + ' transition">' +
+                    '<div class="flex justify-between items-center text-[10px]">' +
+                        '<span class="font-bold ' + (isToday ? 'text-cyan-400' : 'text-gray-400') + '">' + day + '</span>' +
+                        (dayEarned > 0 ? '<i class="ph-bold ph-check-circle text-emerald-400"></i>' : '') +
+                    '</div>' +
+                    '<div class="text-right">' +
+                        (dayEarned > 0 ? '<div class="font-mono font-bold text-emerald-400 text-[10px]">' + dayEarned.toFixed(0) + '</div><div class="text-[8px] text-gray-500 font-sans">EGP</div>' : '<div class="text-[9px] text-gray-700 font-sans italic">Off</div>') +
+                    '</div>' +
+                '</div>';
             }
 
             daysGrid.innerHTML = gridHtml;
@@ -978,37 +909,41 @@
             const elNet = document.getElementById('calStatNet');
 
             if (elShifts) elShifts.innerText = monthShiftsCount;
-            if (elGross) elGross.innerText = `${monthGrossTotal.toFixed(2)} EGP`;
-            if (elNet) elNet.innerText = `${monthNetTotal.toFixed(2)} EGP`;
-        }
+            if (elGross) elGross.innerText = monthGrossTotal.toFixed(2) + ' EGP';
+            if (elNet) elNet.innerText = monthNetTotal.toFixed(2) + ' EGP';
+        };
 
-        function changeMonth(delta) {
-            currentDateView.setMonth(currentDateView.getMonth() + delta);
-            renderCalendar();
-        }
+        window.changeMonth = function(delta) {
+            window.currentDateView.setMonth(window.currentDateView.getMonth() + delta);
+            window.renderCalendar();
+        };
 
-        function showInstallHelp() {
+        window.showInstallHelp = function() {
             const modal = document.getElementById('installModal');
             if (modal) modal.classList.remove('hidden');
-        }
+        };
 
-        function closeInstallModal() {
+        window.closeInstallModal = function() {
             const modal = document.getElementById('installModal');
             if (modal) modal.classList.add('hidden');
-        }
+        };
+
+        window.addEventListener('visibilitychange', function() {
+            window.saveCurrentState();
+        });
+
+        window.addEventListener('beforeunload', function() {
+            window.saveCurrentState();
+        });
 
         window.onload = function() {
-            // Version Check Guard: Retain user shift history across updates!
-            const lastVersion = localStorage.getItem('cnx_app_version');
-            if (lastVersion !== APP_VERSION) {
-                localStorage.setItem('cnx_app_version', APP_VERSION);
-                console.log(`App updated smoothly to version ${APP_VERSION}. All shift history preserved!`);
-            }
-
-            loadSavedState();
-            recalculateRates();
-            loadShiftHistory();
-            renderCalendar();
-            updateUI();
+            window.initDeviceId();
+            window.loadSavedState();
+            window.recalculateRates();
+            window.loadShiftHistory();
+            window.renderCalendar();
+            window.updateUI();
         };
-<!-- ... existing code -->
+    </script>
+</body>
+</html>
