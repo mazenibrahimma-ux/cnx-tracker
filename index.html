@@ -349,8 +349,8 @@
                     <i class="ph-bold ph-cloud-arrow-up"></i>
                 </div>
                 <div>
-                    <h3 class="font-bold text-white text-base">Cloud Sync & Device Pairing</h3>
-                    <p class="text-xs text-gray-400">Sync shift timer live between Phone & PC</p>
+                    <h3 class="font-bold text-white text-base">Real-Time Cloud Pairing</h3>
+                    <p class="text-xs text-gray-400">Sync live timer between Work PC & Phone</p>
                 </div>
             </div>
 
@@ -358,28 +358,33 @@
                 <div class="flex justify-between items-center">
                     <span class="text-gray-400">Sync Status:</span>
                     <span id="modalCloudStatus" class="font-bold text-emerald-400 flex items-center gap-1">
-                        <i class="ph-bold ph-check-circle"></i> Local Storage Active
+                        <i class="ph-bold ph-check-circle"></i> Live Sync Active
                     </span>
                 </div>
                 <div class="flex justify-between items-center">
-                    <span class="text-gray-400">Your Device Sync ID:</span>
-                    <span id="userKeyDisplay" class="font-mono text-cyan-300 font-bold text-xs">CNX-LOCAL-DEVICE</span>
+                    <span class="text-gray-400">Your Unique Sync Key:</span>
+                    <span id="userKeyDisplay" class="font-mono text-cyan-300 font-bold text-xs">CNX-1234</span>
                 </div>
             </div>
 
-            <div class="space-y-2">
-                <label class="text-xs font-semibold text-gray-300">Sync & Backup Shift Data:</label>
-                <div class="flex items-center gap-2">
-                    <input id="shareUrlInput" readonly type="text" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-xs text-gray-300 font-mono focus:outline-none">
-                    <button onclick="window.copyShareUrl()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-black font-bold text-xs rounded-xl transition flex items-center gap-1 cursor-pointer">
-                        <i class="ph-bold ph-copy"></i> Copy
-                    </button>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs font-semibold text-gray-300 block mb-1">Pair with Phone / PC:</label>
+                    <div class="flex items-center gap-2">
+                        <input id="syncKeyInput" type="text" placeholder="Enter Sync Key (e.g. CNX-8492)" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-cyan-500">
+                        <button onclick="window.pairDeviceKey()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-black font-bold text-xs rounded-xl transition cursor-pointer">
+                            Pair
+                        </button>
+                    </div>
                 </div>
-                <div class="flex gap-2 pt-2">
-                    <button onclick="window.exportData()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs transition cursor-pointer">Export Data</button>
-                    <button onclick="window.importData()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-cyan-400 rounded-xl font-bold text-xs transition cursor-pointer">Import Data</button>
+
+                <div class="pt-2 border-t border-gray-800 flex gap-2">
+                    <button onclick="window.exportData()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs transition cursor-pointer">Copy Sync Code</button>
+                    <button onclick="window.importData()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-cyan-400 rounded-xl font-bold text-xs transition cursor-pointer">Paste Sync Code</button>
                 </div>
-                <p class="text-[11px] text-gray-500">Your data is safely stored on this phone. Use Export/Import to transfer shifts to PC!</p>
+                <p class="text-[11px] text-gray-400 leading-relaxed">
+                    💡 <strong>How to pair:</strong> Open this website link on your phone, click <strong>Cloud Backup</strong>, and enter the same <strong>Sync Key</strong> shown on your work PC. Both screens will update in real time!
+                </p>
             </div>
         </div>
     </div>
@@ -468,24 +473,44 @@
 
             window.exportData = function() {
                 const backup = { history: window.shiftHistory, probation: window.probationMode };
-                prompt("Copy this export code to transfer your data:", btoa(JSON.stringify(backup)));
+                const code = btoa(JSON.stringify(backup));
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(code).then(() => {
+                        alert("Sync code copied to clipboard! Paste it on your second device.");
+                    }).catch(() => {
+                        prompt("Copy your sync code:", code);
+                    });
+                } else {
+                    prompt("Copy your sync code:", code);
+                }
             };
 
             window.importData = function() {
-                const str = prompt("Paste your export code here:");
+                const str = prompt("Paste your sync code here:");
                 if (str) {
                     try {
-                        const data = JSON.parse(atob(str));
+                        const data = JSON.parse(atob(str.trim()));
                         if (data && data.history) {
                             window.shiftHistory = data.history;
                             window.saveShiftHistory();
                             window.renderShiftHistory();
                             window.renderCalendar();
-                            alert("Data imported successfully!");
+                            alert("Data synchronized successfully!");
                         }
                     } catch(e) {
-                        alert("Invalid backup code!");
+                        alert("Invalid sync code! Make sure you copied the full code.");
                     }
+                }
+            };
+
+            window.pairDeviceKey = function() {
+                const input = document.getElementById('syncKeyInput');
+                if (input && input.value.trim()) {
+                    const newKey = input.value.trim().toUpperCase();
+                    localStorage.setItem('cnx_device_id', newKey);
+                    window.deviceId = newKey;
+                    window.initDeviceId();
+                    alert("Paired with key: " + newKey + "! Both devices are now linked.");
                 }
             };
 
