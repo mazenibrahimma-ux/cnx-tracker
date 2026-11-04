@@ -7,17 +7,12 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'Fira Code', 'monospace'] } } }
-        }
+        tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'Fira Code', 'monospace'] } } } }
     </script>
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
@@ -26,12 +21,15 @@
         .glow-text { text-shadow: 0 0 20px rgba(16,185,129,.45), 0 0 40px rgba(16,185,129,.2); }
         .glow-box { box-shadow: 0 0 30px -5px rgba(16,185,129,.15); }
         .tab-active { color: #06b6d4; border-color: #0891b2; background-color: rgba(6,182,212,.1); }
+        input[type="time"], input[type="number"] { color-scheme: dark; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #111827; }
         ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between selection:bg-cyan-500 selection:text-black">
+
+    <div id="toastHost" class="fixed top-3 inset-x-3 z-[60] space-y-2 pointer-events-none flex flex-col items-center"></div>
 
     <header class="border-b border-gray-800 bg-gray-900/90 backdrop-blur-md sticky top-0 z-40 px-4 py-3 sm:px-8 flex items-center justify-between">
         <div class="flex items-center space-x-3">
@@ -43,30 +41,20 @@
                 <p class="text-xs text-gray-400">Concentrix Alexandria Precision Earnings Tracker</p>
             </div>
         </div>
-
         <div class="flex items-center space-x-2 text-xs">
-            <button onclick="openSyncModal()" id="cloudBadgeBtn" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 font-medium transition cursor-pointer">
-                <span id="syncStatusDot" class="inline-flex rounded-full h-2 w-2 bg-gray-500"></span>
+            <button onclick="openSyncModal()" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 font-medium transition cursor-pointer">
+                <span id="syncStatusDot" class="inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
                 <i class="ph-bold ph-arrows-clockwise text-cyan-400"></i>
                 <span id="syncBadgeText" class="font-mono font-bold">Key: ...</span>
-            </button>
-            <button onclick="openInstallModal()" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 font-medium text-xs transition cursor-pointer">
-                <i class="ph-bold ph-device-mobile text-emerald-400"></i><span>App</span>
             </button>
         </div>
     </header>
 
     <div class="bg-gray-900 border-b border-gray-800 px-4 py-2 sticky top-[65px] z-30">
         <div class="max-w-4xl mx-auto flex items-center justify-center gap-2 sm:gap-4 text-xs font-semibold">
-            <button onclick="switchTab('live')" id="tab-btn-live" class="tab-btn tab-active flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition cursor-pointer">
-                <i class="ph-bold ph-lightning text-base"></i><span>Live Shift</span>
-            </button>
-            <button onclick="switchTab('calendar')" id="tab-btn-calendar" class="tab-btn text-gray-400 hover:text-white flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition cursor-pointer">
-                <i class="ph-bold ph-calendar text-base"></i><span>Calendar</span>
-            </button>
-            <button onclick="switchTab('settings')" id="tab-btn-settings" class="tab-btn text-gray-400 hover:text-white flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition cursor-pointer">
-                <i class="ph-bold ph-sliders text-base"></i><span>Pay & Log</span>
-            </button>
+            <button onclick="switchTab('live')" id="tab-btn-live" class="tab-btn tab-active flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition cursor-pointer"><i class="ph-bold ph-lightning text-base"></i><span>Live Shift</span></button>
+            <button onclick="switchTab('calendar')" id="tab-btn-calendar" class="tab-btn text-gray-400 hover:text-white flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition cursor-pointer"><i class="ph-bold ph-calendar text-base"></i><span>Calendar</span></button>
+            <button onclick="switchTab('settings')" id="tab-btn-settings" class="tab-btn text-gray-400 hover:text-white flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition cursor-pointer"><i class="ph-bold ph-sliders text-base"></i><span>Pay & Log</span></button>
         </div>
     </div>
 
@@ -78,13 +66,13 @@
                 <div class="bg-gray-900/90 border border-emerald-900/40 rounded-3xl p-6 glow-box relative overflow-hidden flex flex-col justify-between">
                     <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
                     <div>
-                        <div class="flex justify-between items-center mb-2">
+                        <div class="flex justify-between items-center mb-2 gap-2 flex-wrap">
                             <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
                                 <span class="relative flex h-2 w-2">
                                     <span id="pulseDot" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 hidden"></span>
                                     <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                                 </span>
-                                Real-Time Earnings Accumulation
+                                Real-Time Net Earnings
                             </span>
                             <span id="shiftStatusBadge" class="text-xs font-semibold px-3 py-1 rounded-full bg-gray-800 text-gray-400 border border-gray-700">Clocked Out</span>
                         </div>
@@ -93,35 +81,30 @@
                                 <span id="liveCounter" class="text-4xl sm:text-6xl font-extrabold font-mono text-emerald-400 glow-text tracking-tight">0.0000</span>
                                 <span class="text-xl font-bold text-emerald-500 font-mono">EGP</span>
                             </div>
-                            <div class="flex items-center gap-4 mt-2 text-xs text-gray-400">
-                                <span>Estimated Net Take-Home (~15% tax): <strong id="netEarningsDisplay" class="text-cyan-400 font-mono">0.00 EGP</strong></span>
+                            <div class="mt-2 text-xs text-gray-400">
+                                Net after estimated <span id="taxLabel">15</span>% deductions &middot; Gross: <strong id="grossDisplay" class="text-gray-300 font-mono">0.00 EGP</strong>
                             </div>
+                            <div id="nextEventText" class="mt-2 text-xs text-cyan-300 font-semibold"></div>
                         </div>
                     </div>
-
                     <div class="flex flex-wrap gap-3 pt-4 border-t border-gray-800/80">
-                        <button id="clockBtn" onclick="toggleClock()" class="flex-1 min-w-[140px] py-3.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-950 font-bold text-sm transition flex items-center justify-center gap-2 cursor-pointer"></button>
+                        <button id="clockBtn" onclick="toggleClock()" class="flex-1 min-w-[140px] py-3.5 px-5 rounded-2xl text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer"></button>
                         <button id="breakBtn" onclick="toggleLunch()" disabled class="py-3.5 px-5 rounded-2xl bg-gray-800 text-gray-400 font-bold text-sm transition border border-gray-700 opacity-50 cursor-not-allowed flex items-center justify-center gap-2">
                             <i class="ph-bold ph-coffee"></i><span id="breakBtnLabel">Take Lunch (45m, unpaid)</span>
                         </button>
                         <button id="shortBreakBtn" onclick="toggleShortBreak()" disabled class="py-3.5 px-4 rounded-2xl bg-gray-800 text-gray-400 font-bold text-sm transition border border-gray-700 opacity-50 cursor-not-allowed flex items-center justify-center gap-2">
                             <i class="ph-bold ph-timer"></i><span id="shortBreakLabel">Break (15m, paid)</span>
                         </button>
-                        <button onclick="resetShift()" title="Discard current shift" class="py-3.5 px-4 rounded-2xl bg-gray-800/60 hover:bg-red-950/60 hover:text-red-400 text-gray-400 font-semibold text-sm transition border border-gray-800 flex items-center justify-center cursor-pointer">
-                            <i class="ph-bold ph-arrow-counter-clockwise text-base"></i>
-                        </button>
+                        <button onclick="resetShift()" title="Discard current shift" class="py-3.5 px-4 rounded-2xl bg-gray-800/60 hover:bg-red-950/60 hover:text-red-400 text-gray-400 font-semibold text-sm transition border border-gray-800 flex items-center justify-center cursor-pointer"><i class="ph-bold ph-arrow-counter-clockwise text-base"></i></button>
                     </div>
                 </div>
 
                 <div class="bg-gray-900/90 border border-gray-800 rounded-3xl p-6 flex flex-col justify-between">
                     <div class="space-y-4">
-                        <div class="flex justify-between items-center">
-                            <h3 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
-                                <i class="ph-bold ph-clock text-base"></i> Shift Progression & Allowances
-                            </h3>
+                        <div class="flex justify-between items-center gap-2 flex-wrap">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2"><i class="ph-bold ph-clock text-base"></i> Shift Progression & Allowances</h3>
                             <div id="nightStatusBadge" class="hidden items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 text-[10px] font-semibold animate-pulse">
-                                <i class="ph-bold ph-moon-stars text-indigo-400"></i>
-                                <span id="nightBadgeText">Night Differential Active</span>
+                                <i class="ph-bold ph-moon-stars text-indigo-400"></i><span id="nightBadgeText">Night allowance active</span>
                             </div>
                         </div>
                         <div>
@@ -129,27 +112,16 @@
                                 <span class="text-gray-400">Active Paid Time</span>
                                 <span id="workedTimeDisplay" class="font-mono text-cyan-300">00:00:00</span>
                             </div>
-                            <div class="w-full bg-gray-800 h-2.5 rounded-full overflow-hidden">
-                                <div id="shiftProgressBar" class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full w-0 transition-all duration-500"></div>
-                            </div>
+                            <div class="w-full bg-gray-800 h-2.5 rounded-full overflow-hidden"><div id="shiftProgressBar" class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full w-0 transition-all duration-500"></div></div>
                         </div>
                         <div class="grid grid-cols-3 gap-3 pt-2 text-center">
-                            <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800/80">
-                                <span class="text-[10px] uppercase font-bold text-gray-500 block">Hourly Base</span>
-                                <span id="ratePerHour" class="text-xs font-bold text-white font-mono">-</span>
-                            </div>
-                            <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800/80">
-                                <span class="text-[10px] uppercase font-bold text-gray-500 block">Per Minute</span>
-                                <span id="ratePerMinute" class="text-xs font-bold text-emerald-400 font-mono">-</span>
-                            </div>
-                            <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800/80">
-                                <span class="text-[10px] uppercase font-bold text-gray-500 block">Night Rate</span>
-                                <span id="rateNight" class="text-xs font-bold text-indigo-400 font-mono">-</span>
-                            </div>
+                            <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800/80"><span class="text-[10px] uppercase font-bold text-gray-500 block">Hourly Base</span><span id="ratePerHour" class="text-xs font-bold text-white font-mono">-</span></div>
+                            <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800/80"><span class="text-[10px] uppercase font-bold text-gray-500 block">Net / Minute</span><span id="ratePerMinute" class="text-xs font-bold text-emerald-400 font-mono">-</span></div>
+                            <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800/80"><span class="text-[10px] uppercase font-bold text-gray-500 block">Night Rate</span><span id="rateNight" class="text-xs font-bold text-indigo-400 font-mono">-</span></div>
                         </div>
                     </div>
                     <div class="mt-4 pt-3 border-t border-gray-800/80 flex items-center justify-between text-xs text-gray-400">
-                        <span>Shift Target (8.25 Paid Hours):</span>
+                        <span id="shiftGoalLabel">Full shift (est. net):</span>
                         <span id="shiftGoalText" class="font-bold font-mono text-white">-</span>
                     </div>
                 </div>
@@ -161,10 +133,8 @@
             <div class="bg-gray-900/90 border border-gray-800 rounded-3xl p-6 space-y-4">
                 <div class="flex justify-between items-center flex-wrap gap-2 border-b border-gray-800 pb-4">
                     <div>
-                        <h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
-                            <i class="ph-bold ph-calendar text-lg"></i> Concentrix Monthly Shift Calendar
-                        </h2>
-                        <p class="text-xs text-gray-400 mt-0.5">Completed shifts and pay period totals</p>
+                        <h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2"><i class="ph-bold ph-calendar text-lg"></i> Monthly Shift Calendar</h2>
+                        <p class="text-xs text-gray-400 mt-0.5">Net pay per day for completed shifts</p>
                     </div>
                     <div class="flex items-center gap-3">
                         <button onclick="changeMonth(-1)" class="p-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 transition cursor-pointer"><i class="ph-bold ph-caret-left"></i></button>
@@ -173,23 +143,12 @@
                     </div>
                 </div>
                 <div class="grid grid-cols-3 gap-3">
-                    <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center">
-                        <span class="text-[10px] uppercase font-bold text-gray-500 block">Days Worked</span>
-                        <span id="calStatShifts" class="text-base font-bold text-white font-mono">0</span>
-                    </div>
-                    <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center">
-                        <span class="text-[10px] uppercase font-bold text-gray-500 block">Month Gross Pay</span>
-                        <span id="calStatGross" class="text-base font-bold text-emerald-400 font-mono">0.00 EGP</span>
-                    </div>
-                    <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center">
-                        <span class="text-[10px] uppercase font-bold text-gray-500 block">Month Net (~15%)</span>
-                        <span id="calStatNet" class="text-base font-bold text-cyan-400 font-mono">0.00 EGP</span>
-                    </div>
+                    <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center"><span class="text-[10px] uppercase font-bold text-gray-500 block">Days Worked</span><span id="calStatShifts" class="text-base font-bold text-white font-mono">0</span></div>
+                    <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center"><span class="text-[10px] uppercase font-bold text-gray-500 block">Month Net</span><span id="calStatNet" class="text-base font-bold text-emerald-400 font-mono">0.00</span></div>
+                    <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center"><span class="text-[10px] uppercase font-bold text-gray-500 block">Month Gross</span><span id="calStatGross" class="text-base font-bold text-gray-300 font-mono">0.00</span></div>
                 </div>
                 <div class="grid grid-cols-7 gap-1.5 text-center text-xs">
-                    <div class="text-gray-500 font-bold py-1">Mon</div><div class="text-gray-500 font-bold py-1">Tue</div>
-                    <div class="text-gray-500 font-bold py-1">Wed</div><div class="text-gray-500 font-bold py-1">Thu</div>
-                    <div class="text-gray-500 font-bold py-1">Fri</div>
+                    <div class="text-gray-500 font-bold py-1">Mon</div><div class="text-gray-500 font-bold py-1">Tue</div><div class="text-gray-500 font-bold py-1">Wed</div><div class="text-gray-500 font-bold py-1">Thu</div><div class="text-gray-500 font-bold py-1">Fri</div>
                     <div class="font-bold py-1 text-cyan-400">Sat</div><div class="font-bold py-1 text-cyan-400">Sun</div>
                 </div>
                 <div id="calendarDaysGrid" class="grid grid-cols-7 gap-1.5"></div>
@@ -198,17 +157,14 @@
 
         <!-- SETTINGS -->
         <div id="tab-content-settings" class="tab-content hidden space-y-6">
+
             <div class="bg-gray-900/90 border border-gray-800 rounded-3xl p-6 space-y-4">
                 <div class="flex justify-between items-center border-b border-gray-800 pb-3 flex-wrap gap-2">
                     <div>
-                        <h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
-                            <i class="ph-bold ph-sliders text-lg"></i> Salary & Allowance Settings
-                        </h2>
-                        <p class="text-xs text-gray-400 mt-0.5">Walmart Alexandria Offer Breakdown</p>
+                        <h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2"><i class="ph-bold ph-sliders text-lg"></i> Pay Settings</h2>
+                        <p class="text-xs text-gray-400 mt-0.5">Use the exact numbers from your offer letter / payslip</p>
                     </div>
-                    <button onclick="toggleProbationMode()" id="probationToggleBtn" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-                        <i class="ph-bold ph-shield-check text-base"></i><span id="probationStatusText"></span>
-                    </button>
+                    <button onclick="toggleProbationMode()" id="probationToggleBtn" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"><i class="ph-bold ph-shield-check text-base"></i><span id="probationStatusText"></span></button>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                     <div class="space-y-1.5">
@@ -217,7 +173,9 @@
                             <option value="15625">15,625 EGP (Basic + Language + COLA)</option>
                             <option value="11950">11,950 EGP (Basic + Language Only)</option>
                             <option value="9450">9,450 EGP (Basic Salary Only)</option>
+                            <option value="custom">Custom amount...</option>
                         </select>
+                        <input type="number" id="customPackageInput" min="0" step="50" placeholder="Monthly EGP" onchange="recalculateRates()" class="hidden w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
                     </div>
                     <div class="space-y-1.5">
                         <label class="font-semibold text-gray-300 block">Monthly KPI Bonus (Max 3,250 EGP)</label>
@@ -227,522 +185,719 @@
                         </div>
                     </div>
                     <div class="space-y-1.5">
-                        <label class="font-semibold text-gray-300 block">Night Allowance (EGP/h, 00:00-07:00)</label>
+                        <label class="font-semibold text-gray-300 block">Estimated Deductions %</label>
+                        <input type="number" id="taxInput" value="15" min="0" max="60" step="0.5" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
+                        <p class="text-[10px] text-gray-500">Tax + insurance. Adjust until it matches your payslip.</p>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="font-semibold text-gray-300 block">Night Allowance (EGP/h)</label>
                         <input type="number" id="nightAllowanceInput" value="6.85" step="0.05" min="0" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="font-semibold text-gray-300 block">Night Window Starts (hour 0-23)</label>
+                        <input type="number" id="nightStartInput" value="18" min="0" max="23" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="font-semibold text-gray-300 block">Night Window Ends (hour 0-23)</label>
+                        <input type="number" id="nightEndInput" value="6" min="0" max="23" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
                     </div>
                 </div>
             </div>
 
             <div class="bg-gray-900/90 border border-gray-800 rounded-3xl p-6 space-y-4">
+                <div class="flex justify-between items-center border-b border-gray-800 pb-3 flex-wrap gap-2">
+                    <div>
+                        <h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2"><i class="ph-bold ph-alarm text-lg"></i> Auto Schedule & Alerts</h2>
+                        <p class="text-xs text-gray-400 mt-0.5">Breaks, lunch and clock-out happen on their own, even if the app was closed</p>
+                    </div>
+                    <label class="flex items-center gap-2 text-xs font-semibold text-gray-300 cursor-pointer">
+                        <input type="checkbox" id="schedEnabled" onchange="recalculateRates()" class="accent-cyan-400 w-4 h-4"> Auto schedule on
+                    </label>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
+                    <div class="space-y-1.5"><label class="font-semibold text-gray-300 block">Shift start</label><input type="time" id="schedStart" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-2 py-2 text-white font-mono"></div>
+                    <div class="space-y-1.5"><label class="font-semibold text-gray-300 block">Break 1 (15m)</label><input type="time" id="schedB1" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-2 py-2 text-white font-mono"></div>
+                    <div class="space-y-1.5"><label class="font-semibold text-gray-300 block">Lunch (45m)</label><input type="time" id="schedLunch" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-2 py-2 text-white font-mono"></div>
+                    <div class="space-y-1.5"><label class="font-semibold text-gray-300 block">Break 2 (15m)</label><input type="time" id="schedB2" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-2 py-2 text-white font-mono"></div>
+                    <div class="space-y-1.5"><label class="font-semibold text-gray-300 block">Warn me (min before end)</label><input type="number" id="remindInput" min="1" max="30" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-2 py-2 text-white font-mono"></div>
+                </div>
+                <p class="text-[11px] text-gray-400 leading-relaxed">
+                    Shift end is calculated automatically: start + 8.25 paid hours + the 45-minute unpaid lunch. Leave a break blank to skip it. <strong class="text-amber-300">The times above are placeholders: enter your real roster.</strong>
+                </p>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="enableAlerts()" id="alertsBtn" class="text-xs text-cyan-300 font-semibold px-3 py-2 rounded-lg bg-cyan-950 border border-cyan-800 cursor-pointer">Enable notifications</button>
+                    <button onclick="downloadReminders()" class="text-xs text-emerald-300 font-semibold px-3 py-2 rounded-lg bg-emerald-950 border border-emerald-800 cursor-pointer">Add today's alarms to phone calendar (.ics)</button>
+                </div>
+                <p class="text-[11px] text-gray-500 leading-relaxed">
+                    Web pages cannot ring while a phone is locked. In-app alerts work while the app is open; the calendar file gives you real phone alarms that work with the screen locked.
+                </p>
+            </div>
+
+            <div class="bg-gray-900/90 border border-gray-800 rounded-3xl p-6 space-y-4">
                 <div class="flex justify-between items-center flex-wrap gap-2">
                     <div>
-                        <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-                            <i class="ph-bold ph-clock-counter-clockwise text-lg"></i> Completed Shift History Log
-                        </h3>
-                        <p class="text-xs text-gray-400">Recorded work shifts and accumulated pay</p>
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2"><i class="ph-bold ph-clock-counter-clockwise text-lg"></i> Completed Shift History</h3>
+                        <p class="text-xs text-gray-400">Net pay first, gross underneath</p>
                     </div>
-                    <div class="flex gap-2">
-                        <button onclick="exportCSV()" class="text-xs text-cyan-300 font-semibold px-3 py-1.5 rounded-lg bg-cyan-950 border border-cyan-800 transition cursor-pointer">Export CSV</button>
-                        <button onclick="clearHistory()" class="text-xs text-red-400 font-semibold px-3 py-1.5 rounded-lg bg-red-950/40 border border-red-900/60 transition cursor-pointer">Clear</button>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="exportCSV()" class="text-xs text-cyan-300 font-semibold px-3 py-1.5 rounded-lg bg-cyan-950 border border-cyan-800 cursor-pointer">CSV</button>
+                        <button onclick="exportBackup()" class="text-xs text-cyan-300 font-semibold px-3 py-1.5 rounded-lg bg-cyan-950 border border-cyan-800 cursor-pointer">Backup</button>
+                        <button onclick="document.getElementById('restoreFile').click()" class="text-xs text-cyan-300 font-semibold px-3 py-1.5 rounded-lg bg-cyan-950 border border-cyan-800 cursor-pointer">Restore</button>
+                        <input type="file" id="restoreFile" accept="application/json" class="hidden" onchange="importBackup(this)">
+                        <button onclick="clearHistory()" class="text-xs text-red-400 font-semibold px-3 py-1.5 rounded-lg bg-red-950/40 border border-red-900/60 cursor-pointer">Clear</button>
                     </div>
                 </div>
-                <div id="historyList" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+                <div id="historyList" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
             </div>
         </div>
     </main>
 
     <!-- SYNC MODAL -->
     <div id="syncModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-        <div class="bg-gray-900 border border-cyan-800 rounded-3xl max-w-md w-full p-6 space-y-4 relative">
+        <div class="bg-gray-900 border border-cyan-800 rounded-3xl max-w-md w-full p-6 space-y-4 relative max-h-[92vh] overflow-y-auto">
             <button onclick="closeSyncModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl cursor-pointer"><i class="ph-bold ph-x"></i></button>
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-2xl bg-cyan-950 border border-cyan-800 text-cyan-400 flex items-center justify-center text-xl"><i class="ph-bold ph-cloud-arrow-up"></i></div>
-                <div>
-                    <h3 class="font-bold text-white text-base">Real-Time Cloud Synchronization</h3>
-                    <p class="text-xs text-gray-400">Pair work PC & phone using one shared Sync Key</p>
-                </div>
+                <div><h3 class="font-bold text-white text-base">Device Sync</h3><p class="text-xs text-gray-400">Both devices must use the same key</p></div>
             </div>
             <div class="bg-gray-950 p-4 rounded-2xl border border-gray-800 space-y-3 text-xs">
-                <div class="flex justify-between items-center">
-                    <span class="text-gray-400">Cloud Status:</span>
-                    <span id="modalCloudStatus" class="font-bold text-gray-400">Connecting...</span>
-                </div>
-                <div class="flex justify-between items-center">
-                    <span class="text-gray-400">Active Sync Key:</span>
-                    <span id="modalActiveKeyDisplay" class="font-mono text-cyan-300 font-bold text-xs"></span>
-                </div>
+                <div class="flex justify-between items-center gap-3"><span class="text-gray-400">Status:</span><span id="modalCloudStatus" class="font-bold text-gray-400 text-right">Connecting...</span></div>
+                <div class="flex justify-between items-center gap-3"><span class="text-gray-400">This device's key:</span><span id="modalActiveKeyDisplay" class="font-mono text-cyan-300 font-bold"></span></div>
+                <p id="syncHint" class="hidden text-[11px] text-amber-300 leading-relaxed"></p>
             </div>
             <div class="space-y-3">
+                <button onclick="copyPairLink()" class="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 text-black rounded-xl font-bold text-xs cursor-pointer">Copy pairing link (open it on your other device)</button>
                 <div>
-                    <label class="text-xs font-semibold text-gray-300 block mb-1">Enter the Sync Key from your other device:</label>
+                    <label class="text-xs font-semibold text-gray-300 block mb-1">Or type the key from your other device:</label>
                     <div class="flex items-center gap-2">
                         <input id="syncKeyInputField" type="text" placeholder="CNX-XXXXXXXX" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-cyan-500 uppercase">
-                        <button onclick="applySyncKey()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-black font-bold text-xs rounded-xl transition cursor-pointer">Connect</button>
+                        <button onclick="applySyncKey()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs rounded-xl cursor-pointer">Connect</button>
                     </div>
                 </div>
                 <div class="pt-2 border-t border-gray-800 flex gap-2">
-                    <button onclick="copySyncKey()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs transition cursor-pointer">Copy Key</button>
-                    <button onclick="generateNewKey()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-cyan-400 rounded-xl font-bold text-xs transition cursor-pointer">New Key</button>
+                    <button onclick="copySyncKey()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs cursor-pointer">Copy Key</button>
+                    <button onclick="testSync()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-emerald-400 rounded-xl font-bold text-xs cursor-pointer">Test Sync</button>
+                    <button onclick="generateNewKey()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-cyan-400 rounded-xl font-bold text-xs cursor-pointer">New Key</button>
                 </div>
-                <p class="text-[11px] text-gray-400 leading-relaxed">
-                    Clock in on your work PC, open the app on your phone with the same key, and the live balance appears. Treat the key like a password: anyone who has it can see and change your shifts.
-                </p>
+                <p class="text-[11px] text-gray-400 leading-relaxed">Treat the key like a password: anyone who has it can see and change your shifts.</p>
             </div>
         </div>
     </div>
 
-    <!-- INSTALL MODAL -->
-    <div id="installModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden items-center justify-center p-4">
-        <div class="bg-gray-900 border border-emerald-800 rounded-3xl max-w-md w-full p-6 space-y-5 relative">
-            <button onclick="closeInstallModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl cursor-pointer"><i class="ph-bold ph-x"></i></button>
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-2xl bg-emerald-950 border border-emerald-800 text-emerald-400 flex items-center justify-center text-xl"><i class="ph-bold ph-device-mobile"></i></div>
-                <div>
-                    <h3 class="font-bold text-white text-base">Add to Phone Home Screen</h3>
-                    <p class="text-xs text-gray-400">Pin directly to your mobile screen</p>
-                </div>
-            </div>
-            <div class="space-y-3 text-xs bg-gray-950 p-4 rounded-2xl border border-gray-800">
-                <ol class="space-y-2.5 text-gray-300 list-decimal list-inside">
-                    <li>Open this URL in Chrome or Safari on your phone.</li>
-                    <li>Tap Chrome's <strong>3 Dots</strong> or Safari's <strong>Share Icon</strong>.</li>
-                    <li>Select <strong>'Add to Home screen'</strong>.</li>
-                </ol>
-            </div>
-            <button onclick="closeInstallModal()" class="w-full py-3 bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs rounded-xl transition cursor-pointer">Got It!</button>
-        </div>
-    </div>
+<script>
+(function () {
+    'use strict';
 
-    <script>
-    (function () {
-        'use strict';
+    // ---------- Constants ----------
+    const SHIFT_PAID_HOURS = 8.25, WORK_DAYS = 22, KPI_BONUS_MAX = 3250;
+    const LUNCH_MIN = 45, BREAK_MIN = 15;
+    const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-        // ---------- Constants ----------
-        const KPI_BONUS_MAX = 3250;
-        const WORK_DAYS_PER_MONTH = 22;
-        const SHIFT_PAID_HOURS = 8.25;
-        const TAX_RATE = 0.15;
-        const NIGHT_START_HOUR = 0, NIGHT_END_HOUR = 7;   // night differential window [0, 7)
-        const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const DEFAULT_SET = {
+        packageChoice: '15625', customPackage: 0, probation: true, kpi: 0,
+        night: 6.85, nightStart: 18, nightEnd: 6, tax: 15, remind: 7,
+        sched: { enabled: true, start: '09:00', b1: '11:00', lunch: '13:00', b2: '16:00' }
+    };
+    const SET = JSON.parse(JSON.stringify(DEFAULT_SET));
 
-        // ---------- State ----------
-        // Shift state (synced). Earnings are accumulated per segment so the night
-        // differential only applies to the minutes actually worked at night.
-        const S = {
-            isClockedIn: false, isOnLunch: false, isOnShortBreak: false,
-            runStart: null,        // ms timestamp when the current paid run began (null while on lunch)
-            accSecs: 0,            // paid seconds banked before runStart
-            accEarn: 0,            // gross EGP banked before runStart
-            shiftStart: null,      // ms timestamp of clock-in
-            history: []
-        };
-        // Settings (stored per device)
-        const SET = { package: 15625, probation: true, kpi: 0, night: 6.85 };
+    // ---------- Shift state (synced) ----------
+    const S = {
+        isClockedIn: false, isOnLunch: false, isOnShortBreak: false,
+        runStart: null, accSecs: 0, accEarn: 0, shiftStart: null,
+        phaseEnd: null, fired: [], history: [], lastUpdated: 0
+    };
 
-        let syncKey = null, dbRoot = null, dbListener = null, dbRefCurrent = null, serverOffset = 0;
-        let baseHourly = 0, viewDate = new Date(), tickTimer = null;
+    let syncKey = null, dbRoot = null, dbRefCurrent = null, dbListener = null, serverOffset = 0;
+    let baseHourly = 0, viewDate = new Date(), saveTimer = null, lastLogic = 0;
+    let lastRemind = null, lastEndRemind = null, audioCtx = null;
+    const cloud = { connected: false, lastOk: 0, err: '' };
 
-        const $ = id => document.getElementById(id);
-        const now = () => Date.now() + serverOffset;
-        const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-        const pad = n => String(n).padStart(2, '0');
-        const isoDay = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-        const legacyDay = d => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-        const safeJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
-        const store = (k, v) => { try { localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)); } catch (e) {} };
+    const $ = id => document.getElementById(id);
+    const now = () => Date.now() + serverOffset;
+    const pad = n => String(n).padStart(2, '0');
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const isoDay = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    const legacyDay = d => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const timeStr = ms => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const safeJSON = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+    const store = (k, v) => { try { localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)); } catch (e) {} };
+    const fmt = sec => { sec = Math.floor(sec); return pad(Math.floor(sec / 3600)) + ':' + pad(Math.floor((sec % 3600) / 60)) + ':' + pad(sec % 60); };
+    const net = g => g * (1 - SET.tax / 100);
 
-        // ---------- Earnings maths ----------
-        function hourlyAt(hour) {
-            return baseHourly + (hour >= NIGHT_START_HOUR && hour < NIGHT_END_HOUR ? SET.night : 0);
+    // ---------- Earnings maths ----------
+    function isNightHour(h) {
+        const s = SET.nightStart, e = SET.nightEnd;
+        if (s === e) return false;
+        return s < e ? (h >= s && h < e) : (h >= s || h < e);
+    }
+    const hourlyAt = h => baseHourly + (isNightHour(h) ? SET.night : 0);
+
+    // Integrates gross pay between two timestamps, switching rate at each hour boundary,
+    // so only the minutes inside the night window earn the allowance.
+    function earnBetween(t0, t1) {
+        let total = 0, t = t0;
+        while (t < t1) {
+            const d = new Date(t);
+            let next = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours() + 1).getTime();
+            if (next <= t) next = t + 3600000;
+            const end = Math.min(next, t1);
+            total += ((end - t) / 1000) * (hourlyAt(d.getHours()) / 3600);
+            t = end;
         }
-        // Integrate pay between two timestamps, switching rate at each hour boundary.
-        function earnBetween(t0, t1) {
-            let total = 0, t = t0;
-            while (t < t1) {
-                const d = new Date(t);
-                let next = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours() + 1).getTime();
-                if (next <= t) next = t + 3600000;
-                const end = Math.min(next, t1);
-                total += ((end - t) / 1000) * (hourlyAt(d.getHours()) / 3600);
-                t = end;
-            }
-            return total;
+        return total;
+    }
+    function totals(t) {
+        t = t == null ? now() : t;
+        let secs = S.accSecs, earn = S.accEarn;
+        if (S.isClockedIn && S.runStart && t > S.runStart) {
+            secs += (t - S.runStart) / 1000;
+            earn += earnBetween(S.runStart, t);
         }
-        function totals() {
-            let secs = S.accSecs, earn = S.accEarn;
-            if (S.isClockedIn && S.runStart) {
-                const n = now();
-                secs += Math.max(0, (n - S.runStart) / 1000);
-                earn += earnBetween(S.runStart, n);
-            }
-            return { secs, earn };
+        return { secs, earn };
+    }
+    function bankRunAt(t) {
+        if (S.runStart) {
+            if (t > S.runStart) { S.accSecs += (t - S.runStart) / 1000; S.accEarn += earnBetween(S.runStart, t); }
+            S.runStart = null;
         }
-        function bankRun() {      // fold the running segment into the accumulators
-            if (S.runStart) {
-                const n = now();
-                S.accSecs += Math.max(0, (n - S.runStart) / 1000);
-                S.accEarn += earnBetween(S.runStart, n);
-                S.runStart = null;
-            }
-        }
+    }
 
-        // ---------- Persistence & cloud ----------
-        function stateForSave() {
-            return {
-                isClockedIn: S.isClockedIn, isOnLunch: S.isOnLunch, isOnShortBreak: S.isOnShortBreak,
-                runStart: S.runStart, accSecs: S.accSecs, accEarn: S.accEarn, shiftStart: S.shiftStart,
-                shiftHistory: S.history, lastUpdated: Date.now()
-            };
-        }
-        function applyState(d) {
-            S.isClockedIn = !!d.isClockedIn;
-            S.isOnLunch = !!d.isOnLunch;
-            S.isOnShortBreak = !!d.isOnShortBreak;
-            S.runStart = d.runStart || null;
-            S.accSecs = d.accSecs || 0;
-            S.accEarn = d.accEarn || 0;
-            S.shiftStart = d.shiftStart || null;
-            S.history = Array.isArray(d.shiftHistory) ? d.shiftHistory : (d.shiftHistory ? Object.values(d.shiftHistory) : []);
-            // Safety: a clocked-in state that is not on lunch must have a running segment
-            if (S.isClockedIn && !S.isOnLunch && !S.runStart) S.runStart = now();
-            if (!S.isClockedIn) { S.runStart = null; S.accSecs = 0; S.accEarn = 0; }
-        }
-        function save() {
-            const payload = stateForSave();
-            store('cnx_state', payload);
-            if (dbRoot && syncKey) dbRoot.child(syncKey).set(payload).catch(e => setCloud(false, 'Write failed'));
-        }
-        function saveSettings() { store('cnx_settings', SET); }
+    // ---------- Schedule timeline ----------
+    function hm(str) { const m = /^(\d{1,2}):(\d{2})$/.exec(str || ''); return m ? [+m[1], +m[2]] : null; }
+    function atTime(date, v, dayOffset) { return new Date(date.getFullYear(), date.getMonth(), date.getDate() + dayOffset, v[0], v[1], 0, 0).getTime(); }
 
-        function setCloud(ok, msg) {
-            const dot = $('syncStatusDot'), st = $('modalCloudStatus');
-            if (dot) dot.className = 'inline-flex rounded-full h-2 w-2 ' + (ok ? 'bg-emerald-500' : 'bg-gray-500');
-            if (st) { st.textContent = msg; st.className = 'font-bold ' + (ok ? 'text-emerald-400' : 'text-gray-400'); }
-        }
-
-        function genKey() {
-            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-            const arr = new Uint32Array(8);
-            (window.crypto || window.msCrypto).getRandomValues(arr);
-            return 'CNX-' + Array.from(arr, n => chars[n % chars.length]).join('');
-        }
-
-        function initCloud() {
-            try {
-                if (!firebase.apps.length) firebase.initializeApp({ databaseURL: "https://cnx-alex-tracker-default-rtdb.firebaseio.com" });
-                const db = firebase.database();
-                dbRoot = db.ref('sync_rooms');
-                db.ref('.info/serverTimeOffset').on('value', s => { serverOffset = s.val() || 0; });
-                db.ref('.info/connected').on('value', s => setCloud(!!s.val(), s.val() ? 'Connected to Realtime Database' : 'Offline (saving locally)'));
-            } catch (e) {
-                console.warn('Firebase offline mode:', e);
-                setCloud(false, 'Offline (saving locally)');
-            }
-            attachListener();
-        }
-
-        function attachListener() {
-            $('syncBadgeText').textContent = 'Key: ' + syncKey;
-            $('modalActiveKeyDisplay').textContent = syncKey;
-            if (!dbRoot) return;
-            if (dbRefCurrent && dbListener) dbRefCurrent.off('value', dbListener);   // no stacked listeners
-            dbRefCurrent = dbRoot.child(syncKey);
-            let first = true;
-            dbListener = snap => {
-                const data = snap.val();
-                if (data) {
-                    applyState(data);
-                    store('cnx_state', stateForSave());
-                    refreshAll();
-                } else if (first) {
-                    save();   // brand-new key: publish what this device has
-                }
-                first = false;
-            };
-            dbRefCurrent.on('value', dbListener, e => setCloud(false, 'Read blocked: ' + (e && e.code)));
-        }
-
-        // ---------- Actions ----------
-        window.toggleClock = function () {
-            if (!S.isClockedIn) {
-                S.isClockedIn = true; S.isOnLunch = false; S.isOnShortBreak = false;
-                S.accSecs = 0; S.accEarn = 0;
-                S.shiftStart = now(); S.runStart = S.shiftStart;
-            } else {
-                clockOut();
-                return;
-            }
-            save(); refreshAll();
-        };
-
-        window.toggleLunch = function () {
-            if (!S.isClockedIn) return;
-            S.isOnLunch = !S.isOnLunch;
-            if (S.isOnLunch) { S.isOnShortBreak = false; bankRun(); }   // lunch is unpaid: stop the clock
-            else S.runStart = now();
-            save(); refreshAll();
-        };
-
-        // Short breaks are treated as paid: the counter keeps running, only the status label changes.
-        window.toggleShortBreak = function () {
-            if (!S.isClockedIn || S.isOnLunch) return;
-            S.isOnShortBreak = !S.isOnShortBreak;
-            save(); refreshAll();
-        };
-
-        function clockOut() {
-            const t = totals();
-            if (t.earn > 1) {
-                const started = new Date(S.shiftStart || now());   // credit the day the shift STARTED (night shifts cross midnight)
-                S.history.unshift({
-                    id: Date.now(),
-                    iso: isoDay(started),
-                    date: legacyDay(started),
-                    time: started.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    duration: fmt(t.secs),
-                    gross: t.earn.toFixed(2),
-                    net: (t.earn * (1 - TAX_RATE)).toFixed(2)
-                });
-            }
-            S.isClockedIn = false; S.isOnLunch = false; S.isOnShortBreak = false;
-            S.runStart = null; S.accSecs = 0; S.accEarn = 0; S.shiftStart = null;
-            save(); refreshAll();
-        }
-
-        window.resetShift = function () {
-            if (S.isClockedIn && !confirm('Discard the current shift without saving it?')) return;
-            S.isClockedIn = false; S.isOnLunch = false; S.isOnShortBreak = false;
-            S.runStart = null; S.accSecs = 0; S.accEarn = 0; S.shiftStart = null;
-            save(); refreshAll();
-        };
-
-        window.deleteShift = function (id) {
-            if (!confirm('Delete this shift from the log?')) return;
-            S.history = S.history.filter(s => s.id !== id);
-            save(); renderHistory(); renderCalendar();
-        };
-
-        window.clearHistory = function () {
-            if (!confirm('Clear all logged shifts on all synced devices?')) return;
-            S.history = [];
-            save(); renderHistory(); renderCalendar();
-        };
-
-        // ---------- Rates ----------
-        window.recalculateRates = function () {
-            SET.package = parseFloat($('packageSelect').value) || 15625;
-            SET.night = Math.max(0, parseFloat($('nightAllowanceInput').value) || 0);
-            SET.kpi = SET.probation ? 0 : (parseFloat($('kpiSlider').value) || 0);
-            $('kpiValueText').textContent = SET.kpi + '%';
-
-            const monthly = SET.package + (SET.probation ? 0 : KPI_BONUS_MAX * SET.kpi / 100);
-            baseHourly = monthly / WORK_DAYS_PER_MONTH / SHIFT_PAID_HOURS;
-
-            $('ratePerHour').textContent = baseHourly.toFixed(2) + ' EGP/h';
-            $('ratePerMinute').textContent = (baseHourly / 60).toFixed(2) + ' EGP/m';
-            $('rateNight').textContent = (baseHourly + SET.night).toFixed(2) + ' EGP/h';
-            $('shiftGoalText').textContent = (baseHourly * SHIFT_PAID_HOURS).toFixed(2) + ' EGP';
-            $('nightBadgeText').textContent = 'Night Differential (+' + SET.night.toFixed(2) + ' LE/h) Active';
-            saveSettings();
-            updateDisplay();
-        };
-
-        window.toggleProbationMode = function () {
-            SET.probation = !SET.probation;
-            applyProbationUI();
-            recalculateRates();
-        };
-
-        function applyProbationUI() {
-            const btn = $('probationToggleBtn'), slider = $('kpiSlider');
-            const base = 'px-3.5 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ';
-            if (SET.probation) {
-                btn.className = base + 'bg-emerald-950 border border-emerald-700 text-emerald-300';
-                $('probationStatusText').textContent = 'First 3 Months (KPI off)';
-                slider.disabled = true; slider.classList.add('opacity-50', 'cursor-not-allowed');
-            } else {
-                btn.className = base + 'bg-cyan-950 border border-cyan-700 text-cyan-300';
-                $('probationStatusText').textContent = 'Post-Probation (KPI Enabled)';
-                slider.disabled = false; slider.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
-        }
-
-        // ---------- Display ----------
-        function fmt(sec) {
-            sec = Math.floor(sec);
-            return pad(Math.floor(sec / 3600)) + ':' + pad(Math.floor((sec % 3600) / 60)) + ':' + pad(sec % 60);
-        }
-
-        function updateDisplay() {
-            const t = totals();
-            $('liveCounter').textContent = t.earn.toFixed(4);
-            $('netEarningsDisplay').textContent = (t.earn * (1 - TAX_RATE)).toFixed(2) + ' EGP';
-            $('workedTimeDisplay').textContent = fmt(t.secs);
-            $('shiftProgressBar').style.width = Math.min(100, t.secs / (SHIFT_PAID_HOURS * 3600) * 100) + '%';
-
-            const h = new Date().getHours();
-            const night = S.isClockedIn && !S.isOnLunch && h >= NIGHT_START_HOUR && h < NIGHT_END_HOUR;
-            const nb = $('nightStatusBadge');
-            nb.classList.toggle('hidden', !night);
-            nb.classList.toggle('flex', night);
-        }
-
-        function updateUI() {
-            const clockBtn = $('clockBtn'), lunch = $('breakBtn'), brk = $('shortBreakBtn'), badge = $('shiftStatusBadge');
-            const on = S.isClockedIn;
-            if (on) {
-                clockBtn.className = 'flex-1 min-w-[140px] py-3.5 px-5 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm transition flex items-center justify-center gap-2 cursor-pointer';
-                clockBtn.innerHTML = '<i class="ph-bold ph-stop"></i><span>Clock Out</span>';
-            } else {
-                clockBtn.className = 'flex-1 min-w-[140px] py-3.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2 cursor-pointer';
-                clockBtn.innerHTML = '<i class="ph-bold ph-play"></i><span>Clock In Shift</span>';
-            }
-            [lunch, brk].forEach(b => {
-                b.disabled = !on;
-                b.classList.toggle('opacity-50', !on);
-                b.classList.toggle('cursor-not-allowed', !on);
-                b.classList.toggle('hover:bg-gray-700', on);
-            });
-            brk.disabled = !on || S.isOnLunch;
-            $('breakBtnLabel').textContent = S.isOnLunch ? 'Resume Work' : 'Take Lunch (45m, unpaid)';
-            $('shortBreakLabel').textContent = S.isOnShortBreak ? 'Back from Break' : 'Break (15m, paid)';
-
-            badge.textContent = !on ? 'Clocked Out' : S.isOnLunch ? 'On Lunch (unpaid)' : S.isOnShortBreak ? 'On 15m Break (paid)' : 'Clocked In';
-            badge.className = 'text-xs font-semibold px-3 py-1 rounded-full border ' +
-                (on ? 'bg-emerald-950 text-emerald-400 border-emerald-800' : 'bg-gray-800 text-gray-400 border-gray-700');
-            $('pulseDot').classList.toggle('hidden', !(on && !S.isOnLunch));
-        }
-
-        function refreshAll() { updateUI(); updateDisplay(); renderHistory(); renderCalendar(); }
-
-        function startTicker() {
-            clearInterval(tickTimer);
-            // Pay is derived from timestamps, so a throttled background tab or sleeping phone never loses time.
-            tickTimer = setInterval(() => { if (S.isClockedIn && S.runStart) updateDisplay(); }, 100);
-            document.addEventListener('visibilitychange', () => { if (!document.hidden) updateDisplay(); });
-        }
-
-        // ---------- History & calendar ----------
-        function renderHistory() {
-            const list = $('historyList');
-            if (!S.history.length) { list.innerHTML = '<div class="text-xs text-gray-500 text-center py-4">No logged shifts yet.</div>'; return; }
-            list.innerHTML = S.history.map(s =>
-                '<div class="flex items-center justify-between p-3 rounded-2xl bg-gray-950 border border-gray-800 text-xs">' +
-                    '<div class="flex items-center gap-3">' +
-                        '<div class="w-8 h-8 rounded-xl bg-emerald-950 text-emerald-400 flex items-center justify-center font-bold"><i class="ph-bold ph-check"></i></div>' +
-                        '<div><div class="font-bold text-white">' + esc(s.date) + ' <span class="text-gray-500 font-normal">(' + esc(s.time) + ')</span></div>' +
-                        '<div class="text-[11px] text-gray-400">Duration: ' + esc(s.duration) + '</div></div>' +
-                    '</div>' +
-                    '<div class="flex items-center gap-3">' +
-                        '<div class="text-right"><div class="font-bold font-mono text-emerald-400">+' + esc(s.gross) + ' EGP</div>' +
-                        '<div class="text-[10px] text-cyan-400 font-mono">Net ~' + esc(s.net) + ' EGP</div></div>' +
-                        '<button onclick="deleteShift(' + (Number(s.id) || 0) + ')" title="Delete" class="text-gray-600 hover:text-red-400 cursor-pointer"><i class="ph-bold ph-trash"></i></button>' +
-                    '</div>' +
-                '</div>').join('');
-        }
-
-        function renderCalendar() {
-            const grid = $('calendarDaysGrid');
-            const y = viewDate.getFullYear(), m = viewDate.getMonth();
-            $('calendarMonthLabel').textContent = MONTHS[m] + ' ' + y;
-
-            const byDay = {};
-            S.history.forEach(s => {
-                const k = s.iso || s.date;     // old entries only have the "02 Nov 2026" string
-                byDay[k] = (byDay[k] || 0) + (parseFloat(s.gross) || 0);
-            });
-
-            let start = new Date(y, m, 1).getDay() - 1; if (start < 0) start = 6;
-            const daysInMonth = new Date(y, m + 1, 0).getDate();
-            let html = '', gross = 0, worked = 0;
-            for (let i = 0; i < start; i++) html += '<div class="h-14 rounded-xl bg-gray-950/40 border border-gray-900"></div>';
-            for (let day = 1; day <= daysInMonth; day++) {
-                const d = new Date(y, m, day);
-                const earned = (byDay[isoDay(d)] || 0) + (byDay[legacyDay(d)] || 0);
-                if (earned > 0) { worked++; gross += earned; }
-                html += '<div class="h-14 rounded-xl p-1.5 flex flex-col justify-between border ' + (earned > 0 ? 'border-emerald-800 bg-emerald-950/30' : 'border-gray-800 bg-gray-950/80') + '">' +
-                    '<div class="flex justify-between items-center text-[10px]"><span class="font-bold text-gray-400">' + day + '</span>' +
-                    (earned > 0 ? '<i class="ph-bold ph-check-circle text-emerald-400"></i>' : '') + '</div>' +
-                    '<div class="text-right">' + (earned > 0
-                        ? '<div class="font-mono font-bold text-emerald-400 text-[10px]">' + earned.toFixed(0) + '</div><div class="text-[8px] text-gray-500">EGP</div>'
-                        : '<div class="text-[9px] text-gray-700 italic">Off</div>') + '</div></div>';
-            }
-            grid.innerHTML = html;
-            $('calStatShifts').textContent = worked;
-            $('calStatGross').textContent = gross.toFixed(2) + ' EGP';
-            $('calStatNet').textContent = (gross * (1 - TAX_RATE)).toFixed(2) + ' EGP';
-        }
-
-        window.changeMonth = function (delta) {
-            viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + delta, 1);   // day=1 avoids 31st overflow
-            renderCalendar();
-        };
-
-        window.exportCSV = function () {
-            const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-            let csv = '\uFEFFDate,Start Time,Duration,Gross EGP,Net EGP\n';
-            S.history.forEach(s => { csv += [q(s.iso || s.date), q(s.time), q(s.duration), s.gross, s.net].join(',') + '\n'; });
-            const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-            const a = document.createElement('a');
-            a.href = url; a.download = 'cnx_shift_history.csv';
-            document.body.appendChild(a); a.click(); a.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-        };
-
-        // ---------- Navigation & modals ----------
-        window.switchTab = function (name) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(el => { el.classList.remove('tab-active'); el.classList.add('text-gray-400'); });
-            $('tab-content-' + name).classList.remove('hidden');
-            const b = $('tab-btn-' + name); b.classList.add('tab-active'); b.classList.remove('text-gray-400');
-            if (name === 'calendar') renderCalendar();
-            if (name === 'settings') renderHistory();
-        };
-        const modal = (id, show) => { const el = $(id); el.classList.toggle('hidden', !show); el.classList.toggle('flex', show); };
-        window.openSyncModal = () => modal('syncModal', true);
-        window.closeSyncModal = () => modal('syncModal', false);
-        window.openInstallModal = () => modal('installModal', true);
-        window.closeInstallModal = () => modal('installModal', false);
-
-        window.applySyncKey = function () {
-            const v = $('syncKeyInputField').value.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');   // Firebase-safe path
-            if (v.length < 6) { alert('Enter a valid Sync Key.'); return; }
-            syncKey = v; store('cnx_sync_key', v);
-            attachListener(); closeSyncModal();
-        };
-        window.copySyncKey = function () {
-            if (navigator.clipboard) navigator.clipboard.writeText(syncKey).then(() => alert('Sync Key copied: ' + syncKey));
-            else prompt('Copy your Sync Key:', syncKey);
-        };
-        window.generateNewKey = function () {
-            if (!confirm('Create a new key? Your other devices must enter it to stay in sync.')) return;
-            syncKey = genKey(); store('cnx_sync_key', syncKey);
-            attachListener(); save();
-        };
-
-        // ---------- Init ----------
-        document.addEventListener('DOMContentLoaded', function () {
-            const savedSet = safeJSON('cnx_settings');
-            if (savedSet) Object.assign(SET, savedSet);
-            $('packageSelect').value = String(SET.package);
-            $('nightAllowanceInput').value = SET.night;
-            $('kpiSlider').value = SET.kpi;
-            applyProbationUI();
-            recalculateRates();
-
-            const local = safeJSON('cnx_state');
-            if (local) applyState(local);
-
-            syncKey = localStorage.getItem('cnx_sync_key');
-            if (!syncKey || syncKey === 'CNX-ALEX-7788') {     // never reuse the old public default key
-                syncKey = genKey(); store('cnx_sync_key', syncKey);
-            }
-
-            refreshAll();
-            startTicker();
-            initCloud();
+    function timeline(anchor) {
+        const sc = SET.sched, sh = hm(sc.start);
+        if (!sh) return null;
+        const base = new Date(anchor);
+        let start = null, best = Infinity;
+        [-1, 0, 1].forEach(off => { const c = atTime(base, sh, off), d = Math.abs(c - anchor); if (d < best) { best = d; start = c; } });
+        const startDate = new Date(start);
+        const events = [], lunchSpans = [];
+        let unpaidMs = 0;
+        [['b1', sc.b1, BREAK_MIN, 'break'], ['lunch', sc.lunch, LUNCH_MIN, 'lunch'], ['b2', sc.b2, BREAK_MIN, 'break']].forEach(it => {
+            const v = hm(it[1]); if (!v) return;
+            let s = atTime(startDate, v, 0); if (s < start) s = atTime(startDate, v, 1);
+            const e = s + it[2] * 60000;
+            events.push({ id: it[0] + 's', t: s, kind: it[3], isStart: true, end: e });
+            events.push({ id: it[0] + 'e', t: e, kind: it[3], isStart: false });
+            if (it[3] === 'lunch') { lunchSpans.push([s, e]); unpaidMs += it[2] * 60000; }
         });
-    })();
-    </script>
+        if (!lunchSpans.length) unpaidMs = 0;
+        const end = start + SHIFT_PAID_HOURS * 3600000 + unpaidMs;
+        events.push({ id: 'end', t: end, kind: 'end', isStart: false });
+        events.sort((a, b) => a.t - b.t);
+        return { start, end, events, lunchSpans };
+    }
+
+    function projectedGross() {
+        const tl = SET.sched.enabled ? timeline(S.isClockedIn && S.shiftStart ? S.shiftStart : now()) : null;
+        if (!tl) return baseHourly * SHIFT_PAID_HOURS;
+        let t = tl.start, total = 0;
+        tl.lunchSpans.slice().sort((a, b) => a[0] - b[0]).forEach(sp => { total += earnBetween(t, sp[0]); t = sp[1]; });
+        return total + earnBetween(t, tl.end);
+    }
+
+    // ---------- Phase (break / lunch) handling ----------
+    function startLunchAt(at, endAt) {
+        if (S.isOnLunch) return;
+        bankRunAt(at);
+        S.isOnLunch = true; S.isOnShortBreak = false;
+        S.phaseEnd = endAt || at + LUNCH_MIN * 60000;
+    }
+    function startBreakAt(at, endAt) {
+        if (S.isOnLunch) return;
+        S.isOnShortBreak = true;
+        S.phaseEnd = endAt || at + BREAK_MIN * 60000;
+    }
+    function endPhaseAt(at, n, announce) {
+        const wasLunch = S.isOnLunch;
+        if (wasLunch) { S.isOnLunch = false; S.runStart = at; }
+        S.isOnShortBreak = false; S.phaseEnd = null;
+        if (announce && n - at < 60000) notify('Back to work', wasLunch ? 'Lunch is over. The pay clock is running again.' : 'Break is over.');
+    }
+    function clockOutAt(t) {
+        const tot = totals(t);
+        const id = S.shiftStart || Date.now();
+        if (tot.earn > 1 && !S.history.some(h => h.id === id)) {      // id check prevents duplicates from two devices
+            const started = new Date(S.shiftStart || t);
+            S.history.unshift({
+                id: id, iso: isoDay(started), date: legacyDay(started), time: timeStr(started.getTime()),
+                duration: fmt(tot.secs), gross: tot.earn.toFixed(2), net: net(tot.earn).toFixed(2)
+            });
+        }
+        S.isClockedIn = false; S.isOnLunch = false; S.isOnShortBreak = false;
+        S.runStart = null; S.accSecs = 0; S.accEarn = 0; S.shiftStart = null; S.phaseEnd = null; S.fired = [];
+    }
+
+    // Runs ~once per second and on tab focus: applies every scheduled event that is due,
+    // at its true timestamp, even if the app was closed when it happened.
+    function logicTick() {
+        if (!S.isClockedIn) return;
+        const n = now();
+        let changed = false;
+        const tl = SET.sched.enabled ? timeline(S.shiftStart || n) : null;
+        if (tl) {
+            for (const ev of tl.events) {
+                if (ev.t > n) break;
+                if (S.fired.indexOf(ev.id) > -1) continue;
+                S.fired.push(ev.id); changed = true;
+                if (ev.id === 'end') { if (ev.t > S.shiftStart) { clockOutAt(ev.t); notify('Shift complete', 'You were clocked out automatically.'); } }
+                else if (ev.isStart) {
+                    if (ev.end > S.shiftStart) { const at = Math.max(ev.t, S.shiftStart); ev.kind === 'lunch' ? startLunchAt(at, ev.end) : startBreakAt(at, ev.end); }
+                } else if (ev.t > S.shiftStart) {
+                    if (ev.kind === 'lunch' ? S.isOnLunch : S.isOnShortBreak) endPhaseAt(ev.t, n, true);
+                }
+                if (!S.isClockedIn) break;
+            }
+        }
+        if (S.isClockedIn && (S.isOnLunch || S.isOnShortBreak) && S.phaseEnd && n >= S.phaseEnd) {
+            endPhaseAt(S.phaseEnd, n, true); changed = true;       // manual breaks end on their own too
+        }
+        if (S.isClockedIn) {
+            if ((S.isOnLunch || S.isOnShortBreak) && S.phaseEnd) {
+                const at = S.phaseEnd - SET.remind * 60000;
+                if (n >= at && n < S.phaseEnd && lastRemind !== S.phaseEnd) {
+                    lastRemind = S.phaseEnd;
+                    const m = Math.max(1, Math.ceil((S.phaseEnd - n) / 60000));
+                    notify((S.isOnLunch ? 'Lunch' : 'Break') + ' ends in ' + m + ' min', 'Lock your phone and head back. Back at ' + timeStr(S.phaseEnd) + '.');
+                }
+            }
+            if (tl) {
+                const at = tl.end - SET.remind * 60000;
+                if (n >= at && n < tl.end && lastEndRemind !== tl.end) {
+                    lastEndRemind = tl.end;
+                    notify('Shift ends in ' + Math.max(1, Math.ceil((tl.end - n) / 60000)) + ' min', 'Auto clock-out at ' + timeStr(tl.end) + '.');
+                }
+            }
+        }
+        if (changed) { save(); refreshAll(); }
+    }
+
+    function updateNextEvent() {
+        const el = $('nextEventText');
+        if (!SET.sched.enabled) { el.textContent = 'Auto schedule is off. Manual breaks still end by themselves (15 / 45 min).'; return; }
+        const n = now();
+        const tl = timeline(S.isClockedIn && S.shiftStart ? S.shiftStart : n);
+        if (!tl) { el.textContent = 'Set your shift start time in Pay & Log.'; return; }
+        const ev = tl.events.find(e => e.t > n && (!S.isClockedIn || S.shiftStart < e.t));
+        if (!ev) { el.textContent = ''; return; }
+        const mins = Math.max(0, Math.round((ev.t - n) / 60000));
+        const label = ev.id === 'end' ? 'Shift ends' : (ev.kind === 'lunch' ? 'Lunch' : 'Break') + (ev.isStart ? ' starts' : ' ends');
+        el.textContent = 'Next: ' + label + ' at ' + timeStr(ev.t) + ' (in ' + (mins >= 60 ? Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm' : mins + ' min') + ')';
+    }
+
+    // ---------- Alerts ----------
+    function ensureAudio() {
+        try { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch (e) {}
+    }
+    function beep() {
+        if (!audioCtx) return;
+        try {
+            [0, 0.35, 0.7].forEach(off => {
+                const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                o.frequency.value = 880; o.connect(g); g.connect(audioCtx.destination);
+                const t = audioCtx.currentTime + off;
+                g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+                o.start(t); o.stop(t + 0.3);
+            });
+        } catch (e) {}
+    }
+    function notify(title, body) {
+        const host = $('toastHost');
+        const el = document.createElement('div');
+        el.className = 'pointer-events-auto w-full max-w-md bg-gray-900 border border-amber-500/60 rounded-2xl px-4 py-3 shadow-2xl flex items-start gap-3';
+        el.innerHTML = '<i class="ph-bold ph-bell-ringing text-amber-400 text-xl mt-0.5"></i><div class="flex-1"><div class="font-bold text-sm text-white">' + esc(title) + '</div><div class="text-xs text-gray-300 mt-0.5">' + esc(body) + '</div></div><button class="text-gray-400 hover:text-white cursor-pointer"><i class="ph-bold ph-x"></i></button>';
+        el.querySelector('button').onclick = () => el.remove();
+        host.appendChild(el);
+        setTimeout(() => el.remove(), 60000);
+        try { if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]); } catch (e) {}
+        beep();
+        try { if ('Notification' in window && Notification.permission === 'granted') new Notification(title, { body: body, tag: 'cnx-' + title }); } catch (e) {}
+    }
+    window.enableAlerts = function () {
+        ensureAudio();
+        if (!('Notification' in window)) { alert('This browser does not support notifications. In-app banners and sound will still work while the app is open.'); return; }
+        Notification.requestPermission().then(p => { $('alertsBtn').textContent = p === 'granted' ? 'Notifications on' : 'Notifications blocked in browser settings'; });
+    };
+
+    window.downloadReminders = function () {
+        const tl = timeline(S.isClockedIn && S.shiftStart ? S.shiftStart : now());
+        if (!tl) { alert('Set your shift start time first.'); return; }
+        const lead = SET.remind * 60000, z = ms => new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+        const rows = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//CNX Shift Visualizer//EN'];
+        let i = 0;
+        const add = (title, t) => {
+            rows.push('BEGIN:VEVENT', 'UID:cnx-' + tl.start + '-' + (i++) + '@shift-visualizer', 'DTSTAMP:' + z(Date.now()),
+                'DTSTART:' + z(t), 'DTEND:' + z(t + 60000), 'SUMMARY:' + title,
+                'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + title, 'TRIGGER:PT0S', 'END:VALARM', 'END:VEVENT');
+        };
+        add('Shift starts', tl.start);
+        tl.events.forEach(e => {
+            const name = e.kind === 'lunch' ? 'Lunch' : 'Break';
+            if (e.id === 'end') add('Shift ends in ' + SET.remind + ' min', e.t - lead);
+            else if (e.isStart) add(name + ' starts now', e.t);
+            else add(name + ' ends in ' + SET.remind + ' min - head back', e.t - lead);
+        });
+        rows.push('END:VCALENDAR');
+        const url = URL.createObjectURL(new Blob([rows.join('\r\n')], { type: 'text/calendar' }));
+        const a = document.createElement('a'); a.href = url; a.download = 'cnx_shift_alarms.ics';
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+
+    // ---------- Persistence & cloud ----------
+    function settingsPayload() { return JSON.parse(JSON.stringify(SET)); }
+    function statePayload() {
+        return {
+            schema: 3, isClockedIn: S.isClockedIn, isOnLunch: S.isOnLunch, isOnShortBreak: S.isOnShortBreak,
+            runStart: S.runStart, accSecs: S.accSecs, accEarn: S.accEarn, shiftStart: S.shiftStart,
+            phaseEnd: S.phaseEnd, fired: S.fired, shiftHistory: S.history, settings: settingsPayload(), lastUpdated: S.lastUpdated
+        };
+    }
+    function mergeSettings(src) {
+        if (!src) return;
+        const sched = Object.assign({}, DEFAULT_SET.sched, SET.sched, src.sched || {});
+        Object.keys(DEFAULT_SET).forEach(k => { if (k !== 'sched' && src[k] !== undefined) SET[k] = src[k]; });
+        SET.sched = sched;
+    }
+    function applyState(d) {
+        S.isClockedIn = !!d.isClockedIn; S.isOnLunch = !!d.isOnLunch; S.isOnShortBreak = !!d.isOnShortBreak;
+        S.runStart = d.runStart || null; S.accSecs = d.accSecs || 0; S.accEarn = d.accEarn || 0;
+        S.shiftStart = d.shiftStart || null; S.phaseEnd = d.phaseEnd || null;
+        S.fired = Array.isArray(d.fired) ? d.fired : (d.fired ? Object.values(d.fired) : []);
+        S.history = Array.isArray(d.shiftHistory) ? d.shiftHistory : (d.shiftHistory ? Object.values(d.shiftHistory) : []);
+        S.lastUpdated = d.lastUpdated || 0;
+        if (S.isClockedIn && !S.isOnLunch && !S.runStart) S.runStart = now();
+        if (!S.isClockedIn) { S.runStart = null; S.accSecs = 0; S.accEarn = 0; S.phaseEnd = null; S.fired = []; }
+    }
+    function save() {
+        S.lastUpdated = now();
+        const payload = statePayload();
+        store('cnx_state', payload);
+        if (dbRoot && syncKey) {
+            dbRoot.child(syncKey).set(payload)
+                .then(() => { cloud.lastOk = Date.now(); cloud.err = ''; renderCloud(); })
+                .catch(e => { cloud.err = (e && e.code) || 'write failed'; renderCloud(); });
+        }
+    }
+    function queueSave() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 500); }
+
+    function renderCloud() {
+        const dot = $('syncStatusDot'), st = $('modalCloudStatus'), hint = $('syncHint');
+        const ok = cloud.connected && cloud.lastOk && !cloud.err;
+        dot.className = 'inline-flex rounded-full h-2 w-2 ' + (cloud.err ? 'bg-red-500' : ok ? 'bg-emerald-500' : 'bg-amber-500');
+        st.textContent = cloud.err ? 'Error: ' + cloud.err : ok ? 'Synced at ' + new Date(cloud.lastOk).toLocaleTimeString() : cloud.connected ? 'Connected, waiting for first sync' : 'Offline (saving on this device only)';
+        st.className = 'font-bold text-right ' + (cloud.err ? 'text-red-400' : ok ? 'text-emerald-400' : 'text-gray-400');
+        if (/PERMISSION/i.test(cloud.err)) { hint.textContent = 'The Firebase database rules are rejecting this app. Sync cannot work until the rules allow read/write on sync_rooms (test-mode rules expire after 30 days).'; hint.classList.remove('hidden'); }
+        else if (!cloud.connected) { hint.textContent = 'Cannot reach the database. Check the internet connection, and that the Firebase Realtime Database in the code still exists.'; hint.classList.remove('hidden'); }
+        else hint.classList.add('hidden');
+    }
+
+    function genKey() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', arr = new Uint32Array(8);
+        window.crypto.getRandomValues(arr);
+        return 'CNX-' + Array.from(arr, n => chars[n % chars.length]).join('');
+    }
+
+    function initCloud() {
+        try {
+            if (!firebase.apps.length) firebase.initializeApp({ databaseURL: "https://cnx-alex-tracker-default-rtdb.firebaseio.com" });
+            const db = firebase.database();
+            dbRoot = db.ref('sync_rooms');
+            db.ref('.info/serverTimeOffset').on('value', s => { serverOffset = s.val() || 0; });
+            db.ref('.info/connected').on('value', s => { cloud.connected = !!s.val(); renderCloud(); });
+        } catch (e) { console.warn('Firebase unavailable:', e); cloud.err = 'Firebase failed to load'; }
+        renderCloud();
+        attachListener();
+    }
+    function attachListener() {
+        $('syncBadgeText').textContent = 'Key: ' + syncKey;
+        $('modalActiveKeyDisplay').textContent = syncKey;
+        if (!dbRoot) return;
+        if (dbRefCurrent && dbListener) dbRefCurrent.off('value', dbListener);
+        dbRefCurrent = dbRoot.child(syncKey);
+        dbListener = snap => {
+            const d = snap.val();
+            cloud.lastOk = Date.now(); cloud.err = ''; renderCloud();
+            if (!d || !d.lastUpdated) { save(); return; }                       // new key: publish this device's data
+            if (d.lastUpdated < S.lastUpdated) { save(); return; }              // this device is newer
+            if (d.lastUpdated === S.lastUpdated) return;                        // our own echo
+            applyState(d); mergeSettings(d.settings); writeInputs(); recalculateRates(false);
+            store('cnx_state', statePayload()); store('cnx_settings', SET);
+            refreshAll();
+        };
+        dbRefCurrent.on('value', dbListener, e => { cloud.err = (e && e.code) || 'read failed'; renderCloud(); });
+    }
+
+    // ---------- Actions ----------
+    window.toggleClock = function () {
+        ensureAudio();
+        if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+        if (!S.isClockedIn) {
+            S.isClockedIn = true; S.isOnLunch = false; S.isOnShortBreak = false;
+            S.accSecs = 0; S.accEarn = 0; S.fired = []; S.phaseEnd = null;
+            S.shiftStart = now(); S.runStart = S.shiftStart;
+            lastRemind = null; lastEndRemind = null;
+            save(); refreshAll(); logicTick();
+        } else {
+            clockOutAt(now()); save(); refreshAll();
+        }
+    };
+    window.toggleLunch = function () {
+        if (!S.isClockedIn) return;
+        ensureAudio();
+        S.isOnLunch ? endPhaseAt(now(), now(), false) : startLunchAt(now());
+        save(); refreshAll();
+    };
+    window.toggleShortBreak = function () {
+        if (!S.isClockedIn || S.isOnLunch) return;
+        ensureAudio();
+        S.isOnShortBreak ? endPhaseAt(now(), now(), false) : startBreakAt(now());
+        save(); refreshAll();
+    };
+    window.resetShift = function () {
+        if (S.isClockedIn && !confirm('Discard the current shift without saving it?')) return;
+        S.isClockedIn = false; S.isOnLunch = false; S.isOnShortBreak = false;
+        S.runStart = null; S.accSecs = 0; S.accEarn = 0; S.shiftStart = null; S.phaseEnd = null; S.fired = [];
+        save(); refreshAll();
+    };
+    window.deleteShift = function (id) {
+        if (!confirm('Delete this shift from the log?')) return;
+        S.history = S.history.filter(s => s.id !== id);
+        save(); renderHistory(); renderCalendar();
+    };
+    window.clearHistory = function () {
+        if (!confirm('Clear all logged shifts on all synced devices?')) return;
+        S.history = []; save(); renderHistory(); renderCalendar();
+    };
+
+    // ---------- Settings ----------
+    function monthlyBase() { return SET.packageChoice === 'custom' ? (SET.customPackage || 0) : (parseFloat(SET.packageChoice) || 15625); }
+
+    function writeInputs() {
+        $('packageSelect').value = SET.packageChoice;
+        $('customPackageInput').value = SET.customPackage || '';
+        $('kpiSlider').value = SET.kpi;
+        $('nightAllowanceInput').value = SET.night;
+        $('nightStartInput').value = SET.nightStart;
+        $('nightEndInput').value = SET.nightEnd;
+        $('taxInput').value = SET.tax;
+        $('remindInput').value = SET.remind;
+        $('schedEnabled').checked = !!SET.sched.enabled;
+        $('schedStart').value = SET.sched.start || '';
+        $('schedB1').value = SET.sched.b1 || '';
+        $('schedLunch').value = SET.sched.lunch || '';
+        $('schedB2').value = SET.sched.b2 || '';
+        applyProbationUI();
+    }
+    function readInputs() {
+        const num = (id, d, lo, hi) => { const v = parseFloat($(id).value); return isNaN(v) ? d : Math.min(hi, Math.max(lo, v)); };
+        SET.packageChoice = $('packageSelect').value;
+        SET.customPackage = num('customPackageInput', 0, 0, 1000000);
+        SET.kpi = SET.probation ? 0 : num('kpiSlider', 0, 0, 100);
+        SET.night = num('nightAllowanceInput', 6.85, 0, 1000);
+        SET.nightStart = Math.round(num('nightStartInput', 18, 0, 23));
+        SET.nightEnd = Math.round(num('nightEndInput', 6, 0, 23));
+        SET.tax = num('taxInput', 15, 0, 60);
+        SET.remind = Math.round(num('remindInput', 7, 1, 30));
+        SET.sched = { enabled: $('schedEnabled').checked, start: $('schedStart').value, b1: $('schedB1').value, lunch: $('schedLunch').value, b2: $('schedB2').value };
+    }
+
+    window.recalculateRates = function (persist) {
+        if (persist !== false) readInputs();
+        $('customPackageInput').classList.toggle('hidden', SET.packageChoice !== 'custom');
+        $('kpiValueText').textContent = SET.kpi + '%';
+        $('taxLabel').textContent = SET.tax;
+        const monthly = monthlyBase() + (SET.probation ? 0 : KPI_BONUS_MAX * SET.kpi / 100);
+        baseHourly = monthly / WORK_DAYS / SHIFT_PAID_HOURS;
+        $('ratePerHour').textContent = baseHourly.toFixed(2) + ' gross/h';
+        $('ratePerMinute').textContent = net(baseHourly / 60).toFixed(2) + ' EGP/m';
+        $('rateNight').textContent = (baseHourly + SET.night).toFixed(2) + ' gross/h';
+        $('nightBadgeText').textContent = 'Night allowance +' + SET.night.toFixed(2) + '/h active (' + pad(SET.nightStart) + ':00-' + pad(SET.nightEnd) + ':00)';
+        $('shiftGoalLabel').textContent = SET.sched.enabled ? 'Scheduled shift (est. net, night hours included):' : 'Full shift (est. net):';
+        $('shiftGoalText').textContent = net(projectedGross()).toFixed(2) + ' EGP';
+        if (persist !== false) { store('cnx_settings', SET); queueSave(); }
+        updateDisplay(); updateNextEvent(); renderHistory(); renderCalendar();
+    };
+
+    window.toggleProbationMode = function () { SET.probation = !SET.probation; applyProbationUI(); recalculateRates(); };
+    function applyProbationUI() {
+        const btn = $('probationToggleBtn'), slider = $('kpiSlider');
+        const base = 'px-3.5 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ';
+        if (SET.probation) {
+            btn.className = base + 'bg-emerald-950 border border-emerald-700 text-emerald-300';
+            $('probationStatusText').textContent = 'Probation (KPI off)';
+            slider.disabled = true; slider.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            btn.className = base + 'bg-cyan-950 border border-cyan-700 text-cyan-300';
+            $('probationStatusText').textContent = 'Post-Probation (KPI on)';
+            slider.disabled = false; slider.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    // ---------- Display ----------
+    function updateDisplay() {
+        const t = totals();
+        $('liveCounter').textContent = net(t.earn).toFixed(4);
+        $('grossDisplay').textContent = t.earn.toFixed(2) + ' EGP';
+        $('workedTimeDisplay').textContent = fmt(t.secs);
+        $('shiftProgressBar').style.width = Math.min(100, t.secs / (SHIFT_PAID_HOURS * 3600) * 100) + '%';
+        const night = S.isClockedIn && !S.isOnLunch && isNightHour(new Date().getHours());
+        const nb = $('nightStatusBadge'); nb.classList.toggle('hidden', !night); nb.classList.toggle('flex', night);
+        updateBadge();
+    }
+    function updateBadge() {
+        const badge = $('shiftStatusBadge'), on = S.isClockedIn;
+        let txt = 'Clocked Out';
+        if (on) {
+            txt = 'Clocked In';
+            if ((S.isOnLunch || S.isOnShortBreak) && S.phaseEnd) {
+                const left = Math.max(0, Math.ceil((S.phaseEnd - now()) / 1000));
+                txt = (S.isOnLunch ? 'Lunch (unpaid) ' : 'Break (paid) ') + pad(Math.floor(left / 60)) + ':' + pad(left % 60) + ' left';
+            }
+        }
+        if (badge.textContent !== txt) badge.textContent = txt;
+        badge.className = 'text-xs font-semibold px-3 py-1 rounded-full border ' + (on ? 'bg-emerald-950 text-emerald-400 border-emerald-800' : 'bg-gray-800 text-gray-400 border-gray-700');
+    }
+    function updateUI() {
+        const clockBtn = $('clockBtn'), lunch = $('breakBtn'), brk = $('shortBreakBtn'), on = S.isClockedIn;
+        clockBtn.className = 'flex-1 min-w-[140px] py-3.5 px-5 rounded-2xl text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer ' +
+            (on ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20');
+        clockBtn.innerHTML = on ? '<i class="ph-bold ph-stop"></i><span>Clock Out</span>' : '<i class="ph-bold ph-play"></i><span>Clock In Shift</span>';
+        lunch.disabled = !on; brk.disabled = !on || S.isOnLunch;
+        [lunch, brk].forEach(b => { b.classList.toggle('opacity-50', b.disabled); b.classList.toggle('cursor-not-allowed', b.disabled); });
+        $('breakBtnLabel').textContent = S.isOnLunch ? 'Resume Work' : 'Take Lunch (45m, unpaid)';
+        $('shortBreakLabel').textContent = S.isOnShortBreak ? 'Back from Break' : 'Break (15m, paid)';
+        $('pulseDot').classList.toggle('hidden', !(on && !S.isOnLunch));
+    }
+    function refreshAll() { updateUI(); updateDisplay(); updateNextEvent(); renderHistory(); renderCalendar(); $('shiftGoalText').textContent = net(projectedGross()).toFixed(2) + ' EGP'; }
+
+    function renderHistory() {
+        const list = $('historyList');
+        if (!S.history.length) { list.innerHTML = '<div class="text-xs text-gray-500 text-center py-4">No logged shifts yet.</div>'; return; }
+        list.innerHTML = S.history.map(s =>
+            '<div class="flex items-center justify-between p-3 rounded-2xl bg-gray-950 border border-gray-800 text-xs">' +
+              '<div class="flex items-center gap-3"><div class="w-8 h-8 rounded-xl bg-emerald-950 text-emerald-400 flex items-center justify-center"><i class="ph-bold ph-check"></i></div>' +
+              '<div><div class="font-bold text-white">' + esc(s.date) + ' <span class="text-gray-500 font-normal">(' + esc(s.time) + ')</span></div><div class="text-[11px] text-gray-400">Duration: ' + esc(s.duration) + '</div></div></div>' +
+              '<div class="flex items-center gap-3"><div class="text-right"><div class="font-bold font-mono text-emerald-400">+' + esc(s.net) + ' EGP net</div><div class="text-[10px] text-gray-500 font-mono">Gross ' + esc(s.gross) + '</div></div>' +
+              '<button onclick="deleteShift(' + (Number(s.id) || 0) + ')" title="Delete" class="text-gray-600 hover:text-red-400 cursor-pointer"><i class="ph-bold ph-trash"></i></button></div></div>').join('');
+    }
+
+    function renderCalendar() {
+        const grid = $('calendarDaysGrid'), y = viewDate.getFullYear(), m = viewDate.getMonth();
+        $('calendarMonthLabel').textContent = MONTHS[m] + ' ' + y;
+        const byDay = {};
+        S.history.forEach(s => { const k = s.iso || s.date; const o = byDay[k] || (byDay[k] = { g: 0, n: 0 }); o.g += parseFloat(s.gross) || 0; o.n += parseFloat(s.net) || 0; });
+        let start = new Date(y, m, 1).getDay() - 1; if (start < 0) start = 6;
+        const dim = new Date(y, m + 1, 0).getDate();
+        let html = '', g = 0, n = 0, worked = 0;
+        for (let i = 0; i < start; i++) html += '<div class="h-14 rounded-xl bg-gray-950/40 border border-gray-900"></div>';
+        for (let day = 1; day <= dim; day++) {
+            const d = new Date(y, m, day), a = byDay[isoDay(d)] || { g: 0, n: 0 }, b = byDay[legacyDay(d)] || { g: 0, n: 0 };
+            const en = a.n + b.n, eg = a.g + b.g;
+            if (eg > 0) { worked++; g += eg; n += en; }
+            html += '<div class="h-14 rounded-xl p-1.5 flex flex-col justify-between border ' + (eg > 0 ? 'border-emerald-800 bg-emerald-950/30' : 'border-gray-800 bg-gray-950/80') + '">' +
+                '<div class="flex justify-between items-center text-[10px]"><span class="font-bold text-gray-400">' + day + '</span>' + (eg > 0 ? '<i class="ph-bold ph-check-circle text-emerald-400"></i>' : '') + '</div>' +
+                '<div class="text-right">' + (eg > 0 ? '<div class="font-mono font-bold text-emerald-400 text-[10px]">' + en.toFixed(0) + '</div><div class="text-[8px] text-gray-500">net</div>' : '<div class="text-[9px] text-gray-700 italic">Off</div>') + '</div></div>';
+        }
+        grid.innerHTML = html;
+        $('calStatShifts').textContent = worked;
+        $('calStatNet').textContent = n.toFixed(2);
+        $('calStatGross').textContent = g.toFixed(2);
+    }
+    window.changeMonth = function (delta) { viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + delta, 1); renderCalendar(); };
+
+    // ---------- Export / backup ----------
+    function download(name, text, type) {
+        const url = URL.createObjectURL(new Blob([text], { type: type }));
+        const a = document.createElement('a'); a.href = url; a.download = name;
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+    window.exportCSV = function () {
+        const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+        let csv = '\uFEFFDate,Start Time,Duration,Net EGP,Gross EGP\n';
+        S.history.forEach(s => { csv += [q(s.iso || s.date), q(s.time), q(s.duration), s.net, s.gross].join(',') + '\n'; });
+        download('cnx_shift_history.csv', csv, 'text/csv;charset=utf-8');
+    };
+    window.exportBackup = function () {
+        download('cnx_backup_' + isoDay(new Date()) + '.json', JSON.stringify({ app: 'cnx-shift-visualizer', exportedAt: new Date().toISOString(), data: statePayload() }, null, 2), 'application/json');
+    };
+    window.importBackup = function (input) {
+        const f = input.files && input.files[0]; if (!f) return;
+        const r = new FileReader();
+        r.onload = () => {
+            try {
+                const j = JSON.parse(r.result);
+                if (j.app !== 'cnx-shift-visualizer' || !j.data) throw new Error('bad file');
+                if (!confirm('Replace the data on this device (and synced devices) with this backup?')) return;
+                applyState(j.data); mergeSettings(j.data.settings); writeInputs(); recalculateRates(false);
+                store('cnx_settings', SET); save(); refreshAll();
+                alert('Backup restored.');
+            } catch (e) { alert('That file is not a valid backup.'); }
+            input.value = '';
+        };
+        r.readAsText(f);
+    };
+
+    // ---------- Navigation & modals ----------
+    window.switchTab = function (name) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.tab-btn').forEach(el => { el.classList.remove('tab-active'); el.classList.add('text-gray-400'); });
+        $('tab-content-' + name).classList.remove('hidden');
+        const b = $('tab-btn-' + name); b.classList.add('tab-active'); b.classList.remove('text-gray-400');
+        if (name === 'calendar') renderCalendar();
+        if (name === 'settings') renderHistory();
+    };
+    const modal = (id, show) => { const el = $(id); el.classList.toggle('hidden', !show); el.classList.toggle('flex', show); };
+    window.openSyncModal = () => { renderCloud(); modal('syncModal', true); };
+    window.closeSyncModal = () => modal('syncModal', false);
+
+    window.applySyncKey = function () {
+        const v = $('syncKeyInputField').value.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+        if (v.length < 12) { alert('That does not look like a full Sync Key (example: CNX-AB12CD34).'); return; }
+        syncKey = v; store('cnx_sync_key', v); attachListener(); closeSyncModal();
+    };
+    window.copySyncKey = function () {
+        if (navigator.clipboard) navigator.clipboard.writeText(syncKey).then(() => alert('Sync Key copied: ' + syncKey)); else prompt('Copy your Sync Key:', syncKey);
+    };
+    window.copyPairLink = function () {
+        const link = location.href.split('#')[0] + '#key=' + syncKey;
+        if (navigator.clipboard) navigator.clipboard.writeText(link).then(() => alert('Pairing link copied. Open it on your other device.')); else prompt('Copy this link:', link);
+    };
+    window.testSync = function () { cloud.err = ''; cloud.lastOk = 0; renderCloud(); save(); };
+    window.generateNewKey = function () {
+        if (!confirm('Create a new key? Your other devices must switch to it to stay in sync.')) return;
+        syncKey = genKey(); store('cnx_sync_key', syncKey); attachListener(); save();
+    };
+
+    // ---------- Init ----------
+    document.addEventListener('DOMContentLoaded', function () {
+        mergeSettings(safeJSON('cnx_settings'));
+        writeInputs();
+        recalculateRates(false);
+
+        const local = safeJSON('cnx_state');
+        if (local) { applyState(local); if (!safeJSON('cnx_settings') && local.settings) { mergeSettings(local.settings); writeInputs(); recalculateRates(false); } }
+
+        syncKey = localStorage.getItem('cnx_sync_key');
+        const m = /key=([A-Za-z0-9-]+)/.exec(location.hash);
+        if (m) { syncKey = m[1].toUpperCase(); store('cnx_sync_key', syncKey); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
+        if (!syncKey || syncKey === 'CNX-ALEX-7788') { syncKey = genKey(); store('cnx_sync_key', syncKey); }
+
+        if ('Notification' in window && Notification.permission === 'granted') $('alertsBtn').textContent = 'Notifications on';
+
+        refreshAll();
+        logicTick();
+        setInterval(() => {
+            if (S.isClockedIn && S.runStart) updateDisplay(); else if (S.isClockedIn) updateBadge();
+            const t = Date.now();
+            if (t - lastLogic > 1000) { lastLogic = t; logicTick(); updateNextEvent(); }
+        }, 100);
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) { logicTick(); updateDisplay(); } });
+        window.addEventListener('focus', () => logicTick());
+        initCloud();
+    });
+})();
+</script>
 </body>
 </html>
