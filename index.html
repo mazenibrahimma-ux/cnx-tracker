@@ -1,902 +1,1021 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CNX Alexandria - Live Shift & Income Visualizer</title>
-
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'Fira Code', 'monospace'] } } } }
-    </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #0b0f19; color: #f3f4f6; }
-        .glow-text { text-shadow: 0 0 20px rgba(16,185,129,.45), 0 0 40px rgba(16,185,129,.2); }
-        .glow-box { box-shadow: 0 0 30px -5px rgba(16,185,129,.15); }
-        .tab-active { color: #06b6d4; border-color: #0891b2; background-color: rgba(6,182,212,.1); }
-        input[type="time"], input[type="number"] { color-scheme: dark; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #111827; }
-        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0f19">
+<title>CNX Shift Tracker</title>
+<style>
+:root{--bg:#0b0f19;--card:#111827;--card2:#0d1320;--line:#1f2937;--tx:#f3f4f6;--mut:#9ca3af;--dim:#6b7280;--g:#10b981;--c:#06b6d4;--a:#f59e0b;--r:#ef4444;--i:#818cf8;color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:var(--bg);color:var(--tx);font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100dvh}
+button{font:inherit;color:inherit;cursor:pointer}
+.mono{font-family:ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+svg.i{width:1.15em;height:1.15em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.2em;flex:none}
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));background:rgba(11,15,25,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--c),var(--g));color:#04121a;font-weight:900;font-size:12px;display:grid;place-items:center;flex:none}
+.brand h1{margin:0;font-size:16px;font-weight:700;white-space:nowrap}
+.ver{font-size:11px;color:var(--mut);border:1px solid var(--line);background:var(--card);padding:5px 10px;border-radius:99px}
+main{max-width:640px;margin:0 auto;padding:14px 14px calc(92px + env(safe-area-inset-bottom))}
+.tab{display:none}.tab.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin-bottom:12px}
+.card.warn{border-color:#92400e;background:#1c1405}
+.card.info{border-color:#155e75;background:#07222b}
+.row{display:flex;align-items:center;gap:8px}.between{justify-content:space-between}.wrap{flex-wrap:wrap}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g)}
+.badge{font-size:12px;font-weight:600;padding:4px 11px;border-radius:99px;border:1px solid var(--line);background:#1f2937;color:var(--mut);white-space:nowrap}
+.badge.on{background:#052e24;border-color:#065f46;color:#34d399}
+.badge.lunch,.badge.hol{background:#2a1a05;border-color:#92400e;color:#fbbf24}
+.badge.brk{background:#06303a;border-color:#155e75;color:#67e8f9}
+.big{display:flex;align-items:baseline;gap:8px;margin:10px 0 2px}
+.big .num{font-size:clamp(42px,14vw,66px);font-weight:800;color:var(--g);letter-spacing:-.02em;text-shadow:0 0 28px rgba(16,185,129,.35);line-height:1.05}
+.big .cur{font-size:18px;font-weight:700;color:#059669}
+.sub{color:var(--mut);font-size:12.5px}
+.next{margin-top:8px;color:#67e8f9;font-weight:600;font-size:13px}
+.chip{display:inline-block;font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:99px;border:1px solid var(--line);color:var(--mut);margin:2px 4px 2px 0}
+.chip.ok{color:#34d399;border-color:#065f46}.chip.hol{color:#fbbf24;border-color:#92400e}.chip.night{color:#a5b4fc;border-color:#3730a3}
+.btn{border:1px solid var(--line);background:#1f2937;color:var(--tx);border-radius:16px;padding:14px 16px;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.btn.primary{background:linear-gradient(90deg,#10b981,#059669);color:#04130d;border-color:transparent;font-size:15px;padding:16px}
+.btn.stop{background:#dc2626;color:#fff;border-color:transparent}
+.btn.ghost{background:transparent;color:var(--mut);font-weight:600;font-size:13px;padding:11px}
+.btn.cy{background:#06303a;border-color:#155e75;color:#67e8f9}
+.btn.danger{color:#f87171;background:#2a0f12;border-color:#7f1d1d}
+.btn.sm{width:auto;padding:8px 12px;font-size:12px;border-radius:12px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.actions{display:grid;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.bar{height:9px;border-radius:99px;background:#1f2937;overflow:hidden;margin:6px 0 14px}
+.bar>div{height:100%;width:0;background:linear-gradient(90deg,var(--c),var(--g));transition:width .4s}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.tile{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:10px 4px}
+.tile span{display:block;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.04em}
+.tile b{font-size:13px}
+.kv{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;color:var(--mut);margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.kv b{color:var(--tx)}
+h2.t{margin:0 0 2px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c)}
+.hint{color:var(--dim);font-size:11.5px;margin:2px 0 0}
+/* settings */
+.field{display:grid;gap:5px;margin-bottom:12px}.field label{font-size:12px;font-weight:600;color:#d1d5db}
+input,select,textarea{width:100%;background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:12px;padding:11px 12px;font:inherit;font-size:16px;min-width:0}
+input[type=checkbox]{width:auto}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--c)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid4{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+details.card>summary{list-style:none;cursor:pointer;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:8px}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary::after{content:'+';color:var(--mut);font-size:20px;line-height:1}
+details.card[open]>summary::after{content:'\2013'}
+details.card[open]>summary{margin-bottom:14px}
+details.card>summary small{display:block;color:var(--dim);font-weight:500;font-size:11.5px}
+.rotrow{display:flex;align-items:center;gap:5px;margin:6px 0}
+.rotrow>span{width:52px;font-size:12px;color:var(--mut);flex:none}
+.dbtn{flex:1;padding:9px 0;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--mut);font-size:11px;font-weight:700}
+.dbtn.off{background:#2a1a05;border-color:#92400e;color:#fbbf24}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;color:#d1d5db;margin:8px 0}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:6px 0 10px}
+.seg button{background:var(--card2);border:0;padding:9px 4px;font-size:12px;font-weight:700;color:var(--mut)}
+.seg button.on{background:#06303a;color:#67e8f9}
+.list{display:grid;gap:8px}
+.item{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:10px 12px;font-size:13px;text-align:left;width:100%}
+.item .r{text-align:right}.item b.g{color:#34d399}
+.item small{color:var(--dim);display:block;font-size:11px}
+.xbtn{background:none;border:0;color:var(--dim);padding:6px;border-radius:8px}.xbtn:hover{color:#f87171}
+/* calendar */
+.calhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.mbtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:#1f2937;display:grid;place-items:center}
+.mlabel{font-weight:700;font-size:15px;background:none;border:0;padding:8px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.dow{text-align:center;font-size:11px;font-weight:700;color:var(--dim);padding:2px 0}
+.cell{min-height:58px;border-radius:12px;border:1px solid var(--line);background:var(--card2);padding:5px;display:flex;flex-direction:column;justify-content:space-between;text-align:left;color:var(--tx);font-size:11px}
+.cell.pad{border-color:transparent;background:none;pointer-events:none}
+.cell .dn{font-weight:700;color:var(--mut);display:flex;justify-content:space-between;align-items:center}
+.cell .v{font-weight:700;font-size:11px;text-align:right}
+.cell.work{background:#06281f;border-color:#065f46}.cell.work .v{color:#34d399}
+.cell.off{background:repeating-linear-gradient(135deg,#0d1320,#0d1320 6px,#111a2b 6px,#111a2b 12px)}.cell.off .v{color:var(--dim);font-weight:600}
+.cell.hol{border-color:#92400e}.cell.hol .dn{color:#fbbf24}
+.cell.miss{border-style:dashed;border-color:#92400e}.cell.miss .v{color:#fbbf24}
+.cell.today{outline:2px solid var(--c);outline-offset:-1px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11px;color:var(--dim);margin-top:12px}
+/* nav + sheet + toast */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;background:rgba(17,24,39,.97);backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+nav.tabs button{flex:1;background:none;border:0;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 4px;font-size:11px;font-weight:600;border-radius:12px}
+nav.tabs button.on{color:var(--c);background:rgba(6,182,212,.1)}
+nav.tabs svg{width:22px;height:22px}
+.sheet{display:none;position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.72);align-items:flex-end;justify-content:center}
+.sheet.on{display:flex}
+.panel{width:100%;max-width:560px;max-height:90dvh;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+@media(min-width:600px){.sheet{align-items:center}.panel{border-radius:22px}}
+.sheethead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+.sheethead h3{margin:0;font-size:17px}
+.x{background:none;border:0;color:var(--mut);font-size:20px;padding:2px 6px}
+#toasts{position:fixed;left:12px;right:12px;top:calc(64px + env(safe-area-inset-top));z-index:60;display:grid;gap:8px;justify-items:center;pointer-events:none}
+.toast{pointer-events:auto;width:100%;max-width:520px;background:#111827;border:1px solid rgba(245,158,11,.6);border-radius:16px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.toast b{display:block;font-size:14px}.toast span{font-size:12.5px;color:#d1d5db}
+textarea{min-height:150px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.empty{color:var(--dim);text-align:center;padding:14px 0;font-size:12.5px}
+</style>
 </head>
-<body class="min-h-screen flex flex-col justify-between selection:bg-cyan-500 selection:text-black">
+<body>
 
-    <div id="toastHost" class="fixed top-3 inset-x-3 z-[60] space-y-2 pointer-events-none flex flex-col items-center"></div>
+<div id="toasts" aria-live="polite"></div>
 
-    <header class="border-b border-gray-800 bg-gray-900/90 backdrop-blur-md sticky top-0 z-40 px-4 py-3 sm:px-8 flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-emerald-400 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-cyan-500/20">CNX</div>
-            <div>
-                <h1 class="text-base font-bold tracking-wide text-white flex items-center gap-2">
-                    Shift Visualizer <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800">WALMART ALEX</span>
-                </h1>
-                <p class="text-xs text-gray-400">Concentrix Alexandria Precision Earnings Tracker</p>
-            </div>
-        </div>
-        <div class="flex items-center space-x-2 text-xs">
-            <button onclick="openSyncModal()" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 font-medium transition cursor-pointer">
-                <span id="syncStatusDot" class="inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                <i class="ph-bold ph-arrows-clockwise text-cyan-400"></i>
-                <span id="syncBadgeText" class="font-mono font-bold">Key: ...</span>
-            </button>
-        </div>
-    </header>
+<header class="top">
+  <div class="brand"><div class="logo">CNX</div><h1>Shift Tracker</h1></div>
+  <button class="ver mono" id="verBtn" onclick="CNX.showChangelog()"></button>
+</header>
 
-    <div class="bg-gray-900 border-b border-gray-800 px-4 py-2 sticky top-[65px] z-30">
-        <div class="max-w-4xl mx-auto flex items-center justify-center gap-2 sm:gap-4 text-xs font-semibold">
-            <button onclick="switchTab('live')" id="tab-btn-live" class="tab-btn tab-active flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition cursor-pointer"><i class="ph-bold ph-lightning text-base"></i><span>Live Shift</span></button>
-            <button onclick="switchTab('calendar')" id="tab-btn-calendar" class="tab-btn text-gray-400 hover:text-white flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition cursor-pointer"><i class="ph-bold ph-calendar text-base"></i><span>Calendar</span></button>
-            <button onclick="switchTab('settings')" id="tab-btn-settings" class="tab-btn text-gray-400 hover:text-white flex-1 max-w-[160px] py-2 px-3 rounded-xl border border-transparent flex items-center justify-center gap-2 transition cursor-pointer"><i class="ph-bold ph-sliders text-base"></i><span>Pay & Log</span></button>
+<main>
+  <!-- LIVE -->
+  <section id="tab-live" class="tab on">
+    <div id="notices"></div>
+    <div class="card">
+      <div class="row between wrap">
+        <span class="eyebrow">Net earned this shift</span>
+        <span id="statusBadge" class="badge">Not clocked in</span>
+      </div>
+      <div class="big"><span id="liveCounter" class="num mono">0.00</span><span class="cur">EGP</span></div>
+      <div class="sub">Gross <b id="grossDisplay" class="mono">0.00</b> · estimated deductions <span id="taxLabel">15</span>% · figures are estimates</div>
+      <div id="todayChips" style="margin-top:8px"></div>
+      <div id="nextEventText" class="next"></div>
+      <div class="actions">
+        <button id="clockBtn" class="btn primary" onclick="CNX.toggleClock()"></button>
+        <div class="two">
+          <button id="lunchBtn" class="btn" onclick="CNX.toggleLunch()"><i data-ic="coffee"></i><span id="lunchLabel">Lunch (45m, unpaid)</span></button>
+          <button id="breakBtn" class="btn" onclick="CNX.toggleBreak()"><i data-ic="clock"></i><span id="breakLabel">Break (15m, paid)</span></button>
         </div>
+        <div class="two">
+          <button id="setStartBtn" class="btn ghost" onclick="CNX.openClockIn()">Clock in at a set time</button>
+          <button id="discardBtn" class="btn ghost" onclick="CNX.discard()">Discard shift</button>
+        </div>
+      </div>
     </div>
 
-    <main class="max-w-4xl mx-auto px-4 py-6 sm:px-6 space-y-6 flex-grow w-full">
-
-        <!-- LIVE -->
-        <div id="tab-content-live" class="tab-content space-y-6">
-            <div class="grid grid-cols-1 gap-4">
-                <div class="bg-gray-900/90 border border-emerald-900/40 rounded-3xl p-6 glow-box relative overflow-hidden flex flex-col justify-between">
-                    <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-                    <div>
-                        <div class="flex justify-between items-center mb-2 gap-2 flex-wrap">
-                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-                                <span class="relative flex h-2 w-2">
-                                    <span id="pulseDot" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 hidden"></span>
-                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                </span>
-                                Real-Time Net Earnings
-                            </span>
-                            <span id="shiftStatusBadge" class="text-xs font-semibold px-3 py-1 rounded-full bg-gray-800 text-gray-400 border border-gray-700">Clocked Out</span>
-                        </div>
-                        <div class="my-4">
-                            <div class="flex items-baseline gap-2 flex-wrap">
-                                <span id="liveCounter" class="text-4xl sm:text-6xl font-extrabold font-mono text-emerald-400 glow-text tracking-tight">0.0000</span>
-                                <span class="text-xl font-bold text-emerald-500 font-mono">EGP</span>
-                            </div>
-                            <div class="mt-2 text-xs text-gray-400">
-                                Net after estimated <span id="taxLabel">15</span>% deductions &middot; Gross: <strong id="grossDisplay" class="text-gray-300 font-mono">0.00 EGP</strong>
-                            </div>
-                            <div id="nextEventText" class="mt-2 text-xs text-cyan-300 font-semibold"></div>
-                        </div>
-                    </div>
-                    <div class="flex flex-wrap gap-3 pt-4 border-t border-gray-800/80">
-                        <button id="clockBtn" onclick="toggleClock()" class="flex-1 min-w-[140px] py-3.5 px-5 rounded-2xl text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer"></button>
-                        <button id="breakBtn" onclick="toggleLunch()" disabled class="py-3.5 px-5 rounded-2xl bg-gray-800 text-gray-400 font-bold text-sm transition border border-gray-700 opacity-50 cursor-not-allowed flex items-center justify-center gap-2">
-                            <i class="ph-bold ph-coffee"></i><span id="breakBtnLabel">Take Lunch (45m, unpaid)</span>
-                        </button>
-                        <button id="shortBreakBtn" onclick="toggleShortBreak()" disabled class="py-3.5 px-4 rounded-2xl bg-gray-800 text-gray-400 font-bold text-sm transition border border-gray-700 opacity-50 cursor-not-allowed flex items-center justify-center gap-2">
-                            <i class="ph-bold ph-timer"></i><span id="shortBreakLabel">Break (15m, paid)</span>
-                        </button>
-                        <button onclick="resetShift()" title="Discard current shift" class="py-3.5 px-4 rounded-2xl bg-gray-800/60 hover:bg-red-950/60 hover:text-red-400 text-gray-400 font-semibold text-sm transition border border-gray-800 flex items-center justify-center cursor-pointer"><i class="ph-bold ph-arrow-counter-clockwise text-base"></i></button>
-                    </div>
-                </div>
-
-                <div class="bg-gray-900/90 border border-gray-800 rounded-3xl p-6 flex flex-col justify-between">
-                    <div class="space-y-4">
-                        <div class="flex justify-between items-center gap-2 flex-wrap">
-                            <h3 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2"><i class="ph-bold ph-clock text-base"></i> Shift Progression & Allowances</h3>
-                            <div id="nightStatusBadge" class="hidden items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 text-[10px] font-semibold animate-pulse">
-                                <i class="ph-bold ph-moon-stars text-indigo-400"></i><span id="nightBadgeText">Night allowance active</span>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-xs font-semibold mb-1">
-                                <span class="text-gray-400">Active Paid Time</span>
-                                <span id="workedTimeDisplay" class="font-mono text-cyan-300">00:00:00</span>
-                            </div>
-                            <div class="w-full bg-gray-800 h-2.5 rounded-full overflow-hidden"><div id="shiftProgressBar" class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full w-0 transition-all duration-500"></div></div>
-                        </div>
-                        <div class="grid grid-cols-3 gap-3 pt-2 text-center">
-                            <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800/80"><span class="text-[10px] uppercase font-bold text-gray-500 block">Hourly Base</span><span id="ratePerHour" class="text-xs font-bold text-white font-mono">-</span></div>
-                            <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800/80"><span class="text-[10px] uppercase font-bold text-gray-500 block">Net / Minute</span><span id="ratePerMinute" class="text-xs font-bold text-emerald-400 font-mono">-</span></div>
-                            <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800/80"><span class="text-[10px] uppercase font-bold text-gray-500 block">Night Rate</span><span id="rateNight" class="text-xs font-bold text-indigo-400 font-mono">-</span></div>
-                        </div>
-                    </div>
-                    <div class="mt-4 pt-3 border-t border-gray-800/80 flex items-center justify-between text-xs text-gray-400">
-                        <span id="shiftGoalLabel">Full shift (est. net):</span>
-                        <span id="shiftGoalText" class="font-bold font-mono text-white">-</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- CALENDAR -->
-        <div id="tab-content-calendar" class="tab-content hidden space-y-6">
-            <div class="bg-gray-900/90 border border-gray-800 rounded-3xl p-6 space-y-4">
-                <div class="flex justify-between items-center flex-wrap gap-2 border-b border-gray-800 pb-4">
-                    <div>
-                        <h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2"><i class="ph-bold ph-calendar text-lg"></i> Monthly Shift Calendar</h2>
-                        <p class="text-xs text-gray-400 mt-0.5">Net pay per day for completed shifts</p>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <button onclick="changeMonth(-1)" class="p-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 transition cursor-pointer"><i class="ph-bold ph-caret-left"></i></button>
-                        <span id="calendarMonthLabel" class="text-sm font-bold text-white font-mono min-w-[130px] text-center"></span>
-                        <button onclick="changeMonth(1)" class="p-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 transition cursor-pointer"><i class="ph-bold ph-caret-right"></i></button>
-                    </div>
-                </div>
-                <div class="grid grid-cols-3 gap-3">
-                    <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center"><span class="text-[10px] uppercase font-bold text-gray-500 block">Days Worked</span><span id="calStatShifts" class="text-base font-bold text-white font-mono">0</span></div>
-                    <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center"><span class="text-[10px] uppercase font-bold text-gray-500 block">Month Net</span><span id="calStatNet" class="text-base font-bold text-emerald-400 font-mono">0.00</span></div>
-                    <div class="bg-gray-950 p-3 rounded-2xl border border-gray-800 text-center"><span class="text-[10px] uppercase font-bold text-gray-500 block">Month Gross</span><span id="calStatGross" class="text-base font-bold text-gray-300 font-mono">0.00</span></div>
-                </div>
-                <div class="grid grid-cols-7 gap-1.5 text-center text-xs">
-                    <div class="text-gray-500 font-bold py-1">Mon</div><div class="text-gray-500 font-bold py-1">Tue</div><div class="text-gray-500 font-bold py-1">Wed</div><div class="text-gray-500 font-bold py-1">Thu</div><div class="text-gray-500 font-bold py-1">Fri</div>
-                    <div class="font-bold py-1 text-cyan-400">Sat</div><div class="font-bold py-1 text-cyan-400">Sun</div>
-                </div>
-                <div id="calendarDaysGrid" class="grid grid-cols-7 gap-1.5"></div>
-            </div>
-        </div>
-
-        <!-- SETTINGS -->
-        <div id="tab-content-settings" class="tab-content hidden space-y-6">
-
-            <div class="bg-gray-900/90 border border-gray-800 rounded-3xl p-6 space-y-4">
-                <div class="flex justify-between items-center border-b border-gray-800 pb-3 flex-wrap gap-2">
-                    <div>
-                        <h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2"><i class="ph-bold ph-sliders text-lg"></i> Pay Settings</h2>
-                        <p class="text-xs text-gray-400 mt-0.5">Use the exact numbers from your offer letter / payslip</p>
-                    </div>
-                    <button onclick="toggleProbationMode()" id="probationToggleBtn" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"><i class="ph-bold ph-shield-check text-base"></i><span id="probationStatusText"></span></button>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-                    <div class="space-y-1.5">
-                        <label class="font-semibold text-gray-300 block">Monthly Base Package</label>
-                        <select id="packageSelect" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-cyan-500 font-mono">
-                            <option value="15625">15,625 EGP (Basic + Language + COLA)</option>
-                            <option value="11950">11,950 EGP (Basic + Language Only)</option>
-                            <option value="9450">9,450 EGP (Basic Salary Only)</option>
-                            <option value="custom">Custom amount...</option>
-                        </select>
-                        <input type="number" id="customPackageInput" min="0" step="50" placeholder="Monthly EGP" onchange="recalculateRates()" class="hidden w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
-                    </div>
-                    <div class="space-y-1.5">
-                        <label class="font-semibold text-gray-300 block">Monthly KPI Bonus (Max 3,250 EGP)</label>
-                        <div class="flex items-center gap-2">
-                            <input type="range" id="kpiSlider" min="0" max="100" value="0" oninput="recalculateRates()" class="w-full accent-cyan-400">
-                            <span id="kpiValueText" class="font-mono text-cyan-400 font-bold min-w-[36px]">0%</span>
-                        </div>
-                    </div>
-                    <div class="space-y-1.5">
-                        <label class="font-semibold text-gray-300 block">Estimated Deductions %</label>
-                        <input type="number" id="taxInput" value="15" min="0" max="60" step="0.5" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
-                        <p class="text-[10px] text-gray-500">Tax + insurance. Adjust until it matches your payslip.</p>
-                    </div>
-                    <div class="space-y-1.5">
-                        <label class="font-semibold text-gray-300 block">Night Allowance (EGP/h)</label>
-                        <input type="number" id="nightAllowanceInput" value="6.85" step="0.05" min="0" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
-                    </div>
-                    <div class="space-y-1.5">
-                        <label class="font-semibold text-gray-300 block">Night Window Starts (hour 0-23)</label>
-                        <input type="number" id="nightStartInput" value="18" min="0" max="23" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
-                    </div>
-                    <div class="space-y-1.5">
-                        <label class="font-semibold text-gray-300 block">Night Window Ends (hour 0-23)</label>
-                        <input type="number" id="nightEndInput" value="6" min="0" max="23" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-gray-900/90 border border-gray-800 rounded-3xl p-6 space-y-4">
-                <div class="flex justify-between items-center border-b border-gray-800 pb-3 flex-wrap gap-2">
-                    <div>
-                        <h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2"><i class="ph-bold ph-alarm text-lg"></i> Auto Schedule & Alerts</h2>
-                        <p class="text-xs text-gray-400 mt-0.5">Breaks, lunch and clock-out happen on their own, even if the app was closed</p>
-                    </div>
-                    <label class="flex items-center gap-2 text-xs font-semibold text-gray-300 cursor-pointer">
-                        <input type="checkbox" id="schedEnabled" onchange="recalculateRates()" class="accent-cyan-400 w-4 h-4"> Auto schedule on
-                    </label>
-                </div>
-                <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
-                    <div class="space-y-1.5"><label class="font-semibold text-gray-300 block">Shift start</label><input type="time" id="schedStart" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-2 py-2 text-white font-mono"></div>
-                    <div class="space-y-1.5"><label class="font-semibold text-gray-300 block">Break 1 (15m)</label><input type="time" id="schedB1" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-2 py-2 text-white font-mono"></div>
-                    <div class="space-y-1.5"><label class="font-semibold text-gray-300 block">Lunch (45m)</label><input type="time" id="schedLunch" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-2 py-2 text-white font-mono"></div>
-                    <div class="space-y-1.5"><label class="font-semibold text-gray-300 block">Break 2 (15m)</label><input type="time" id="schedB2" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-2 py-2 text-white font-mono"></div>
-                    <div class="space-y-1.5"><label class="font-semibold text-gray-300 block">Warn me (min before end)</label><input type="number" id="remindInput" min="1" max="30" onchange="recalculateRates()" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-2 py-2 text-white font-mono"></div>
-                </div>
-                <p class="text-[11px] text-gray-400 leading-relaxed">
-                    Shift end is calculated automatically: start + 8.25 paid hours + the 45-minute unpaid lunch. Leave a break blank to skip it. <strong class="text-amber-300">The times above are placeholders: enter your real roster.</strong>
-                </p>
-                <div class="flex flex-wrap gap-2">
-                    <button onclick="enableAlerts()" id="alertsBtn" class="text-xs text-cyan-300 font-semibold px-3 py-2 rounded-lg bg-cyan-950 border border-cyan-800 cursor-pointer">Enable notifications</button>
-                    <button onclick="downloadReminders()" class="text-xs text-emerald-300 font-semibold px-3 py-2 rounded-lg bg-emerald-950 border border-emerald-800 cursor-pointer">Add today's alarms to phone calendar (.ics)</button>
-                </div>
-                <p class="text-[11px] text-gray-500 leading-relaxed">
-                    Web pages cannot ring while a phone is locked. In-app alerts work while the app is open; the calendar file gives you real phone alarms that work with the screen locked.
-                </p>
-            </div>
-
-            <div class="bg-gray-900/90 border border-gray-800 rounded-3xl p-6 space-y-4">
-                <div class="flex justify-between items-center flex-wrap gap-2">
-                    <div>
-                        <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2"><i class="ph-bold ph-clock-counter-clockwise text-lg"></i> Completed Shift History</h3>
-                        <p class="text-xs text-gray-400">Net pay first, gross underneath</p>
-                    </div>
-                    <div class="flex gap-2 flex-wrap">
-                        <button onclick="exportCSV()" class="text-xs text-cyan-300 font-semibold px-3 py-1.5 rounded-lg bg-cyan-950 border border-cyan-800 cursor-pointer">CSV</button>
-                        <button onclick="exportBackup()" class="text-xs text-cyan-300 font-semibold px-3 py-1.5 rounded-lg bg-cyan-950 border border-cyan-800 cursor-pointer">Backup</button>
-                        <button onclick="document.getElementById('restoreFile').click()" class="text-xs text-cyan-300 font-semibold px-3 py-1.5 rounded-lg bg-cyan-950 border border-cyan-800 cursor-pointer">Restore</button>
-                        <input type="file" id="restoreFile" accept="application/json" class="hidden" onchange="importBackup(this)">
-                        <button onclick="clearHistory()" class="text-xs text-red-400 font-semibold px-3 py-1.5 rounded-lg bg-red-950/40 border border-red-900/60 cursor-pointer">Clear</button>
-                    </div>
-                </div>
-                <div id="historyList" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
-            </div>
-        </div>
-    </main>
-
-    <!-- SYNC MODAL -->
-    <div id="syncModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-        <div class="bg-gray-900 border border-cyan-800 rounded-3xl max-w-md w-full p-6 space-y-4 relative max-h-[92vh] overflow-y-auto">
-            <button onclick="closeSyncModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl cursor-pointer"><i class="ph-bold ph-x"></i></button>
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-2xl bg-cyan-950 border border-cyan-800 text-cyan-400 flex items-center justify-center text-xl"><i class="ph-bold ph-cloud-arrow-up"></i></div>
-                <div><h3 class="font-bold text-white text-base">Device Sync</h3><p class="text-xs text-gray-400">Both devices must use the same key</p></div>
-            </div>
-            <div class="bg-gray-950 p-4 rounded-2xl border border-gray-800 space-y-3 text-xs">
-                <div class="flex justify-between items-center gap-3"><span class="text-gray-400">Status:</span><span id="modalCloudStatus" class="font-bold text-gray-400 text-right">Connecting...</span></div>
-                <div class="flex justify-between items-center gap-3"><span class="text-gray-400">This device's key:</span><span id="modalActiveKeyDisplay" class="font-mono text-cyan-300 font-bold"></span></div>
-                <p id="syncHint" class="hidden text-[11px] text-amber-300 leading-relaxed"></p>
-            </div>
-            <div class="space-y-3">
-                <button onclick="copyPairLink()" class="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 text-black rounded-xl font-bold text-xs cursor-pointer">Copy pairing link (open it on your other device)</button>
-                <div>
-                    <label class="text-xs font-semibold text-gray-300 block mb-1">Or type the key from your other device:</label>
-                    <div class="flex items-center gap-2">
-                        <input id="syncKeyInputField" type="text" placeholder="CNX-XXXXXXXX" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-cyan-500 uppercase">
-                        <button onclick="applySyncKey()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs rounded-xl cursor-pointer">Connect</button>
-                    </div>
-                </div>
-                <div class="pt-2 border-t border-gray-800 flex gap-2">
-                    <button onclick="copySyncKey()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs cursor-pointer">Copy Key</button>
-                    <button onclick="testSync()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-emerald-400 rounded-xl font-bold text-xs cursor-pointer">Test Sync</button>
-                    <button onclick="generateNewKey()" class="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-cyan-400 rounded-xl font-bold text-xs cursor-pointer">New Key</button>
-                </div>
-                <p class="text-[11px] text-gray-400 leading-relaxed">Treat the key like a password: anyone who has it can see and change your shifts.</p>
-            </div>
-        </div>
+    <div class="card">
+      <div class="row between"><h2 class="t">Shift progress</h2><span id="nightBadge" class="chip night" style="display:none"></span></div>
+      <div class="row between sub"><span>Paid time</span><b id="workedTime" class="mono" style="color:#67e8f9">00:00:00</b></div>
+      <div class="bar"><div id="bar"></div></div>
+      <div class="tiles">
+        <div class="tile"><span>Net / hour</span><b id="rateHour" class="mono">-</b></div>
+        <div class="tile"><span>Net / minute</span><b id="rateMin" class="mono">-</b></div>
+        <div class="tile"><span>Night net / h</span><b id="rateNight" class="mono" style="color:#a5b4fc">-</b></div>
+      </div>
+      <div class="kv"><span>Scheduled shift, net</span><b id="shiftGoal" class="mono">-</b></div>
     </div>
+
+    <div class="card">
+      <div class="row between"><h2 class="t">This month so far</h2><span id="monthDays" class="sub"></span></div>
+      <div class="big" style="margin:6px 0 0"><span id="monthNet" class="mono" style="font-size:28px;font-weight:800;color:#67e8f9">0.00</span><span class="cur" style="font-size:14px;color:#67e8f9">EGP net</span></div>
+      <div class="sub">Gross <span id="monthGross" class="mono">0.00</span> · compare with your payslip at month end</div>
+    </div>
+  </section>
+
+  <!-- CALENDAR -->
+  <section id="tab-cal" class="tab">
+    <div class="card">
+      <div class="calhead">
+        <button class="mbtn" onclick="CNX.month(-1)" aria-label="Previous month"><i data-ic="left"></i></button>
+        <button class="mlabel" id="monthLabel" onclick="CNX.month(0)"></button>
+        <button class="mbtn" onclick="CNX.month(1)" aria-label="Next month"><i data-ic="right"></i></button>
+      </div>
+      <div class="tiles" style="margin-bottom:12px">
+        <div class="tile"><span>Days worked</span><b id="cDays" class="mono">0</b></div>
+        <div class="tile"><span>Month net</span><b id="cNet" class="mono" style="color:#34d399">0</b></div>
+        <div class="tile"><span>Gross</span><b id="cGross" class="mono" style="color:var(--mut)">0</b></div>
+      </div>
+      <div class="cal" id="calHead"></div>
+      <div class="cal" id="calGrid" style="margin-top:5px"></div>
+      <div class="legend"><span><b style="color:#34d399">Green</b> worked (net)</span><span>Hatched = day off</span><span><b style="color:#fbbf24">★</b> public holiday</span><span>Dashed = tracked day with no record</span></div>
+      <p class="hint">Tap any day to add or edit a shift, mark it off, or mark a holiday.</p>
+    </div>
+    <div class="card">
+      <h2 class="t" style="margin-bottom:10px">Shifts this month</h2>
+      <div id="monthList" class="list"></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="tab-set" class="tab">
+
+    <details class="card" id="secPreset">
+      <summary><div>Account preset<small id="presetNow"></small></div></summary>
+      <div class="field"><label for="presetSel">Load a saved setup</label><select id="presetSel"></select></div>
+      <div class="row wrap"><button class="btn sm cy" onclick="CNX.loadPreset()">Load</button><button class="btn sm" onclick="CNX.savePreset()">Save current as…</button><button class="btn sm danger" onclick="CNX.deletePreset()">Delete</button></div>
+      <p class="hint">A preset stores pay, night rules, schedule and days off. Add one per account or contract.</p>
+    </details>
+
+    <details class="card" id="secPay">
+      <summary><div>Pay<small>Package, KPI, deductions, holiday multiplier</small></div></summary>
+      <div class="field"><label for="pkgSel">Monthly base package</label>
+        <select id="pkgSel" onchange="CNX.readSettings()">
+          <option value="15625">15,625 EGP (Basic + Language + COLA)</option>
+          <option value="11950">11,950 EGP (Basic + Language only)</option>
+          <option value="9450">9,450 EGP (Basic only)</option>
+          <option value="custom">Custom amount…</option>
+        </select>
+        <input type="number" id="customPkg" min="0" step="50" inputmode="decimal" placeholder="Monthly EGP" onchange="CNX.readSettings()" style="display:none">
+      </div>
+      <div class="row between" style="margin-bottom:10px"><span class="sub">KPI bonus applies after probation</span><button id="probBtn" class="badge" onclick="CNX.toggleProbation()"></button></div>
+      <div class="field"><label for="kpiAmount">KPI bonus per month (EGP)</label><input type="number" id="kpiAmount" min="0" step="10" inputmode="decimal" onchange="CNX.readSettings()"><p class="hint">Use the KPI amount from your last payslip, not a guess.</p></div>
+      <div class="grid2">
+        <div class="field"><label for="taxInput">Deductions %</label><input type="number" id="taxInput" min="0" max="60" step="0.1" inputmode="decimal" onchange="CNX.readSettings()"></div>
+        <div class="field"><label for="holMult">Holiday pay ×</label><input type="number" id="holMult" min="1" max="5" step="0.5" inputmode="decimal" onchange="CNX.readSettings()"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label for="nightAllow">Night allowance (EGP/h)</label><input type="number" id="nightAllow" min="0" step="0.05" inputmode="decimal" onchange="CNX.readSettings()"></div>
+        <div class="field"><label>Night hours (from → to)</label><div class="grid2"><input type="number" id="nightStart" min="0" max="23" inputmode="numeric" onchange="CNX.readSettings()"><input type="number" id="nightEnd" min="0" max="23" inputmode="numeric" onchange="CNX.readSettings()"></div></div>
+      </div>
+      <p class="hint">The holiday multiplier applies to the base hourly rate. The night allowance is added on top, unmultiplied.</p>
+    </details>
+
+    <details class="card" id="secSlip">
+      <summary><div>Calibrate from your payslip<small>Replace guesses with real numbers</small></div></summary>
+      <div class="grid2">
+        <div class="field"><label for="calBase">Base package (EGP)</label><input type="number" id="calBase" inputmode="decimal"></div>
+        <div class="field"><label for="calKpi">KPI bonus paid (EGP)</label><input type="number" id="calKpi" inputmode="decimal"></div>
+        <div class="field"><label for="calGross">Total gross (EGP)</label><input type="number" id="calGross" inputmode="decimal"></div>
+        <div class="field"><label for="calNet">Net take-home (EGP)</label><input type="number" id="calNet" inputmode="decimal"></div>
+      </div>
+      <button class="btn cy" onclick="CNX.applyPayslip()">Apply to the app</button>
+      <p class="hint" id="calMsg">Fill any of the fields. Gross + net sets your real deduction %. Base sets the package. KPI sets the bonus.</p>
+    </details>
+
+    <details class="card" id="secSched">
+      <summary><div>Shift schedule<small>Total shift 9h = 8.25h paid + 45m unpaid lunch</small></div></summary>
+      <div class="grid2">
+        <div class="field"><label for="schedStart">Shift starts</label><input type="time" id="schedStart" onchange="CNX.readSettings()"></div>
+        <div class="field"><label for="schedB1">Break 1 (15m paid)</label><input type="time" id="schedB1" onchange="CNX.readSettings()"></div>
+        <div class="field"><label for="schedLunch">Lunch (45m unpaid)</label><input type="time" id="schedLunch" onchange="CNX.readSettings()"></div>
+        <div class="field"><label for="schedB2">Break 2 (15m paid)</label><input type="time" id="schedB2" onchange="CNX.readSettings()"></div>
+      </div>
+      <div class="field"><label for="remindIn">Warn me this many minutes before a break ends</label><input type="number" id="remindIn" min="1" max="30" inputmode="numeric" onchange="CNX.readSettings()"></div>
+      <label class="chk"><input type="checkbox" id="autoChk" onchange="CNX.toggleAuto()"> Track my shifts automatically from this schedule</label>
+      <p class="hint">With this on, the shift starts, pauses for lunch and ends by itself at the scheduled times. Open the app any time and it catches up. Days you did not work: tap the day in the Calendar and mark it off.</p>
+      <div id="confirmBox" style="margin-top:12px"></div>
+    </details>
+
+    <details class="card" id="secRot">
+      <summary><div>Days off &amp; holidays<small>Rotating days off, public holidays</small></div></summary>
+      <div id="rotBox"></div>
+      <h2 class="t" style="margin:16px 0 6px">Public holidays</h2>
+      <div id="holBox" class="list"></div>
+      <div class="grid2" style="margin-top:10px">
+        <div class="field" style="margin:0"><label for="holDate">Date</label><input type="date" id="holDate"></div>
+        <div class="field" style="margin:0"><label for="holName">Name</label><input type="text" id="holName" placeholder="e.g. Eid"></div>
+      </div>
+      <button class="btn sm" style="margin-top:8px" onclick="CNX.addHoliday()">Add holiday</button>
+      <p class="hint">Built in: Jan 7, Jan 25, Apr 25, May 1, Jun 30, Jul 23, Oct 6. Eid, Sham El-Nessim and other moving holidays are not built in. Add them when announced, or tap the day in the Calendar. Working a holiday pays the multiplier. By default a holiday is a day off.</p>
+    </details>
+
+    <details class="card" id="secAlerts">
+      <summary><div>Alerts<small>Notifications and phone alarms</small></div></summary>
+      <div class="two">
+        <button id="alertsBtn" class="btn cy" onclick="CNX.enableAlerts()">Enable notifications</button>
+        <button class="btn cy" onclick="CNX.downloadAlarms()">Phone alarms (.ics, 14 days)</button>
+      </div>
+      <p class="hint">A web page cannot wake a locked phone. In-app alerts work while the app is open. The .ics file adds real calendar alarms for the next 14 days (shift start, breaks, shift end) that ring with the screen locked. Download it again after changing your schedule.</p>
+    </details>
+
+    <details class="card" id="secData">
+      <summary><div>Data<small>Backup, transfer, export</small></div></summary>
+      <div class="two" style="margin-bottom:8px">
+        <button class="btn" onclick="CNX.exportBackup()">Backup file</button>
+        <button class="btn" onclick="document.getElementById('restoreFile').click()">Restore file</button>
+      </div>
+      <input type="file" id="restoreFile" accept="application/json" style="display:none" onchange="CNX.importFile(this)">
+      <div class="two" style="margin-bottom:8px">
+        <button class="btn" onclick="CNX.openTransfer()">Transfer to another device</button>
+        <button class="btn" onclick="CNX.exportCSV()">Export CSV</button>
+      </div>
+      <button class="btn danger" onclick="CNX.clearAll()">Erase all shifts</button>
+      <p class="hint">Everything is stored on this device only. Use Transfer to copy your data to your phone or PC as text.</p>
+    </details>
+
+    <details class="card" id="secAbout">
+      <summary><div>About<small id="aboutVer"></small></div></summary>
+      <div id="changelog"></div>
+    </details>
+  </section>
+</main>
+
+<nav class="tabs" aria-label="Main">
+  <button id="nav-live" class="on" onclick="CNX.tab('live')"><i data-ic="bolt"></i><span>Live</span></button>
+  <button id="nav-cal" onclick="CNX.tab('cal')"><i data-ic="cal"></i><span>Calendar</span></button>
+  <button id="nav-set" onclick="CNX.tab('set')"><i data-ic="sliders"></i><span>Settings</span></button>
+</nav>
+
+<div id="sheet" class="sheet" onclick="if(event.target===this)CNX.closeSheet()"><div class="panel" id="sheetBody"></div></div>
 
 <script>
 (function () {
-    'use strict';
+'use strict';
 
-    // ---------- Constants ----------
-    const SHIFT_PAID_HOURS = 8.25, WORK_DAYS = 22, KPI_BONUS_MAX = 3250;
-    const LUNCH_MIN = 45, BREAK_MIN = 15;
-    const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+/* ================= constants ================= */
+var APP_VERSION = '3.0.0';
+var CHANGELOG = [
+  { v: '3.0.0', d: '6 Nov 2026', items: [
+    'Tracks your shift automatically from the schedule: no need to open the app on time.',
+    'Rotating days off (any cycle length) and public holidays with a pay multiplier (default x2).',
+    'Calendar days are tappable: add, edit or delete a shift, mark a day off, mark a holiday.',
+    'Net first everywhere; gross is small grey text.',
+    'KPI is an amount from your payslip, not a slider. Payslip calibration for deductions.',
+    'Fixed bottom tab bar, cleaner header, works fully offline. Cloud sync removed (use Transfer data).',
+    'Version number, changelog, account presets.' ] },
+  { v: '2.0.0', d: '4 Nov 2026', items: ['Auto breaks, alerts, night window 18:00-06:00, net counter.'] },
+  { v: '1.0.0', d: '2 Nov 2026', items: ['First version.'] }
+];
+var PAID_H = 8.25, WORK_DAYS = 22, LUNCH_MIN = 45, BREAK_MIN = 15, MS = 60000;
+var FIXED_HOLIDAYS = { '01-07': 'Coptic Christmas', '01-25': 'Revolution & Police Day', '04-25': 'Sinai Liberation Day', '05-01': 'Labour Day', '06-30': 'June 30 Revolution', '07-23': 'July 23 Revolution', '10-06': 'Armed Forces Day' };
+var DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+var ICONS = {
+  play: '<polygon points="6 3 20 12 6 21 6 3"/>', stop: '<rect x="5" y="5" width="14" height="14" rx="2"/>',
+  coffee: '<path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><path d="M6 2v2M10 2v2M14 2v2"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  cal: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  sliders: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  trash: '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>', x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  bolt: '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>', left: '<path d="m15 18-6-6 6-6"/>', right: '<path d="m9 18 6-6-6-6"/>',
+  edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>'
+};
+function ic(n) { return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[n] || '') + '</svg>'; }
 
-    const DEFAULT_SET = {
-        packageChoice: '15625', customPackage: 0, probation: true, kpi: 0,
-        night: 6.85, nightStart: 18, nightEnd: 6, tax: 15, remind: 7,
-        sched: { enabled: true, start: '09:00', b1: '11:00', lunch: '13:00', b2: '16:00' }
-    };
-    const SET = JSON.parse(JSON.stringify(DEFAULT_SET));
+/* ================= helpers ================= */
+function $(id) { return document.getElementById(id); }
+function pad(n) { return String(n).padStart(2, '0'); }
+function isoDay(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function parseISO(s) { var p = String(s).split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function tm(ms) { var d = new Date(ms); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function money(n) { return (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function fmtHMS(sec) { sec = Math.max(0, Math.floor(sec)); return pad(Math.floor(sec / 3600)) + ':' + pad(Math.floor(sec % 3600 / 60)) + ':' + pad(sec % 60); }
+function fmtHM(sec) { var m = Math.round(sec / 60); return Math.floor(m / 60) + 'h ' + pad(m % 60) + 'm'; }
+function cd(ms) { var s = Math.max(0, Math.ceil(ms / 1000)); return pad(Math.floor(s / 60)) + ':' + pad(s % 60); }
+function inTxt(ms) { var m = Math.max(0, Math.round(ms / MS)); if (m < 60) return m + ' min'; if (m < 1440) return Math.floor(m / 60) + 'h ' + (m % 60) + 'm'; return Math.floor(m / 1440) + 'd ' + Math.floor(m % 1440 / 60) + 'h'; }
+function dtl(ms) { var d = new Date(ms); return isoDay(d) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function safeJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function mondayISO(d) { var x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return isoDay(x); }
+function sod(ms) { var d = new Date(ms); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+function rs(r) { return r.start || parseISO(r.iso).getTime(); }
 
-    // ---------- Shift state (synced) ----------
-    const S = {
-        isClockedIn: false, isOnLunch: false, isOnShortBreak: false,
-        runStart: null, accSecs: 0, accEarn: 0, shiftStart: null,
-        phaseEnd: null, fired: [], history: [], lastUpdated: 0
-    };
+/* ================= state ================= */
+function defaultSet() {
+  return {
+    preset: 'Walmart Alex (Concentrix)',
+    pkg: '15625', customPkg: 0, probation: true, kpiAmount: 0,
+    night: 6.85, nightStart: 18, nightEnd: 6, tax: 15, holidayMult: 2, remind: 7,
+    sched: { start: '09:00', b1: '11:00', lunch: '13:00', b2: '16:00' },
+    auto: true, confirmed: false, trackFrom: null,
+    rot: { weeks: 2, anchor: mondayISO(new Date()), off: [[false,false,false,false,true,true,false],[false,false,false,false,true,true,false]] },
+    holidays: [], holidaysOff: []
+  };
+}
+var SET = defaultSet();
+var D = { live: null, records: [], over: {}, lastSeen: '' };
+var BH = 0, viewDate = new Date(), alerted = {}, audioCtx = null, curDay = null, lastSlow = 0, lastAuto = 0;
+viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
 
-    let syncKey = null, dbRoot = null, dbRefCurrent = null, dbListener = null, serverOffset = 0;
-    let baseHourly = 0, viewDate = new Date(), saveTimer = null, lastLogic = 0;
-    let lastRemind = null, lastEndRemind = null, audioCtx = null;
-    const cloud = { connected: false, lastOk: 0, err: '' };
+function save() { store('cnx3_data', D); }
+function saveSet() { store('cnx3_settings', SET); }
 
-    const $ = id => document.getElementById(id);
-    const now = () => Date.now() + serverOffset;
-    const pad = n => String(n).padStart(2, '0');
-    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    const isoDay = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-    const legacyDay = d => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    const timeStr = ms => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const safeJSON = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
-    const store = (k, v) => { try { localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)); } catch (e) {} };
-    const fmt = sec => { sec = Math.floor(sec); return pad(Math.floor(sec / 3600)) + ':' + pad(Math.floor((sec % 3600) / 60)) + ':' + pad(sec % 60); };
-    const net = g => g * (1 - SET.tax / 100);
+/* ---- load + migrate from v1/v2 ---- */
+function migrateSettings(o) {
+  if (!o) return;
+  if (o.packageChoice) SET.pkg = o.packageChoice;
+  if (o.customPackage) SET.customPkg = o.customPackage;
+  if (typeof o.probation === 'boolean') SET.probation = o.probation;
+  if (o.kpi && !o.probation) SET.kpiAmount = Math.round(o.kpi * 3250 / 100);
+  ['night', 'nightStart', 'nightEnd', 'tax', 'remind'].forEach(function (k) { if (o[k] != null) SET[k] = o[k]; });
+  if (o.sched) ['start', 'b1', 'lunch', 'b2'].forEach(function (k) { if (o.sched[k]) SET.sched[k] = o.sched[k]; });
+}
+var MON3 = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+function legacyISO(s) { var m = /(\d{1,2})\s+(\w{3})\w*\s+(\d{4})/.exec(s || ''); return m && MON3[m[2]] != null ? isoDay(new Date(+m[3], MON3[m[2]], +m[1])) : isoDay(new Date()); }
+function migrateData(o) {
+  if (!o) return;
+  var h = Array.isArray(o.shiftHistory) ? o.shiftHistory : (o.shiftHistory ? Object.values(o.shiftHistory) : []);
+  h.forEach(function (x, i) {
+    var p = String(x.duration || '').split(':').map(Number);
+    D.records.push({ id: 'old' + (x.id || i), iso: x.iso || legacyISO(x.date), legacy: true, label: (x.date || '') + ' ' + (x.time || ''), duration: x.duration || '', gross: parseFloat(x.gross) || 0, secs: p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : 0 });
+  });
+}
+function mergeSet(s) {
+  if (!s) return;
+  var d = defaultSet();
+  Object.keys(d).forEach(function (k) { if (s[k] !== undefined && k !== 'sched' && k !== 'rot') SET[k] = s[k]; });
+  SET.sched = Object.assign({}, d.sched, s.sched || {});
+  if (s.rot && Array.isArray(s.rot.off) && s.rot.off.length) SET.rot = s.rot;
+  if (!Array.isArray(SET.holidays)) SET.holidays = [];
+  if (!Array.isArray(SET.holidaysOff)) SET.holidaysOff = [];
+}
+function mergeData(d) {
+  D.live = d.live || null; D.records = Array.isArray(d.records) ? d.records : []; D.over = d.over || {}; D.lastSeen = d.lastSeen || '';
+}
+function load() {
+  var s3 = safeJSON('cnx3_settings'), d3 = safeJSON('cnx3_data');
+  if (s3) mergeSet(s3); else migrateSettings(safeJSON('cnx_settings'));
+  if (d3) mergeData(d3);
+  else {
+    var o = safeJSON('cnx_state');
+    if (o) migrateData(o);
+  }
+}
 
-    // ---------- Earnings maths ----------
-    function isNightHour(h) {
-        const s = SET.nightStart, e = SET.nightEnd;
-        if (s === e) return false;
-        return s < e ? (h >= s && h < e) : (h >= s || h < e);
+/* ================= pay maths ================= */
+function net(g) { return g * (1 - SET.tax / 100); }
+function recalc() {
+  var monthly = (SET.pkg === 'custom' ? (+SET.customPkg || 0) : (+SET.pkg || 0)) + (SET.probation ? 0 : (+SET.kpiAmount || 0));
+  BH = monthly / WORK_DAYS / PAID_H;
+}
+function isNight(h) { var s = SET.nightStart, e = SET.nightEnd; if (s === e) return false; return s < e ? (h >= s && h < e) : (h >= s || h < e); }
+function earnBetween(t0, t1, mult) {
+  var total = 0, t = t0;
+  while (t < t1) {
+    var d = new Date(t), nx = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours() + 1).getTime();
+    if (nx <= t) nx = t + 3600000;
+    var end = Math.min(nx, t1);
+    total += (end - t) / 1000 * ((BH * mult + (isNight(d.getHours()) ? SET.night : 0)) / 3600);
+    t = end;
+  }
+  return total;
+}
+function payFor(start, end, lunches, mult) {
+  if (end <= start) return { secs: 0, gross: 0 };
+  var sp = (lunches || []).map(function (l) { return [Math.max(l.s, start), Math.min(l.e, end)]; }).filter(function (x) { return x[1] > x[0]; }).sort(function (a, b) { return a[0] - b[0]; });
+  var t = start, secs = 0, gross = 0;
+  sp.forEach(function (x) {
+    if (x[0] > t) { secs += (x[0] - t) / 1000; gross += earnBetween(t, x[0], mult); }
+    t = Math.max(t, x[1]);
+  });
+  if (end > t) { secs += (end - t) / 1000; gross += earnBetween(t, end, mult); }
+  return { secs: secs, gross: gross };
+}
+
+/* ================= schedule, days, holidays ================= */
+function hm(s) { var m = /^(\d{1,2}):(\d{2})$/.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; }
+function schedStartMs(date) { var m = hm(SET.sched.start); if (m == null) return null; return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, m).getTime(); }
+function timeline(anchor) {
+  var sm = hm(SET.sched.start); if (sm == null || anchor == null) return null;
+  var phases = [], hasLunch = false;
+  [['b1', SET.sched.b1, BREAK_MIN, 'break'], ['lunch', SET.sched.lunch, LUNCH_MIN, 'lunch'], ['b2', SET.sched.b2, BREAK_MIN, 'break']].forEach(function (p) {
+    var m = hm(p[1]); if (m == null) return;
+    var off = m - sm; if (off < 0) off += 1440;
+    var s = anchor + off * MS; phases.push({ id: p[0], kind: p[3], s: s, e: s + p[2] * MS }); if (p[3] === 'lunch') hasLunch = true;
+  });
+  return { start: anchor, end: anchor + (PAID_H * 60 + (hasLunch ? LUNCH_MIN : 0)) * MS, phases: phases };
+}
+function anchorFor(startMs) {
+  var b = new Date(startMs), best = null, bd = 1e18;
+  for (var o = -1; o <= 1; o++) {
+    var a = schedStartMs(new Date(b.getFullYear(), b.getMonth(), b.getDate() + o));
+    if (a == null) return startMs;
+    var dd = Math.abs(a - startMs); if (dd < bd) { bd = dd; best = a; }
+  }
+  return bd <= 4 * 3600000 ? best : startMs;
+}
+function holidayName(d) {
+  var k = isoDay(d); if (SET.holidaysOff.indexOf(k) > -1) return null;
+  var c = SET.holidays.filter(function (h) { return h.d === k; })[0];
+  if (c) return c.n || 'Holiday';
+  return FIXED_HOLIDAYS[k.slice(5)] || null;
+}
+function rotOff(d) {
+  var R = SET.rot, n = Math.max(1, R.weeks | 0), a = parseISO(R.anchor), m = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  var mon = new Date(m); mon.setDate(m.getDate() - ((m.getDay() + 6) % 7));
+  var diff = Math.round((mon - a) / (7 * 86400000)), wi = ((diff % n) + n) % n, dow = (m.getDay() + 6) % 7;
+  return !!(R.off[wi] && R.off[wi][dow]);
+}
+function dayInfo(d) {
+  var k = isoDay(d), ov = D.over[k], hol = holidayName(d), ro = rotOff(d), work = !ro && !hol;
+  if (ov && ov.kind === 'off') work = false;
+  if (ov && ov.kind === 'work') work = true;
+  return { key: k, work: work, hol: hol, rotOff: ro, ov: ov, mult: hol ? SET.holidayMult : 1 };
+}
+function placeLunch(start, end, min) {
+  if (min <= 0) return [];
+  var tl = timeline(anchorFor(start)), s = null;
+  if (tl) { var l = tl.phases.filter(function (p) { return p.kind === 'lunch'; })[0]; if (l && l.s >= start && l.s + min * MS <= end) s = l.s; }
+  if (s == null) s = Math.max(start, Math.min(start + (end - start) / 2 - min * MS / 2, end - min * MS));
+  return [{ s: s, e: s + min * MS, tag: 'm' }];
+}
+
+/* ================= records / live ================= */
+function addRecord(o) {
+  var sp = (o.lunches || []).map(function (l) { return { s: l.s, e: Math.min(l.e, o.end), tag: l.tag }; }).filter(function (l) { return l.e > l.s; });
+  var p = payFor(o.start, o.end, sp, o.mult);
+  var rec = { id: o.id || ('r' + o.start + '_' + Math.random().toString(36).slice(2, 6)), iso: isoDay(new Date(o.start)), start: o.start, end: o.end, lunches: sp, mult: o.mult, gross: +p.gross.toFixed(4), secs: Math.round(p.secs), auto: !!o.auto };
+  D.records.push(rec);
+  D.records.sort(function (a, b) { return rs(b) - rs(a); });
+  return rec;
+}
+function startLive(ms, auto) {
+  var anchor = anchorFor(ms), tl = timeline(anchor), info = dayInfo(new Date(ms)), iso = isoDay(new Date(ms));
+  D.live = { start: ms, anchor: anchor, end: tl && tl.end > ms ? tl.end : null, lunches: [], breaks: [], mult: info.mult, auto: !!auto, iso: iso };
+  if (D.over[iso] && D.over[iso].kind === 'off') delete D.over[iso];
+}
+function finish(endMs) {
+  var L = D.live; if (!L) return;
+  var end = Math.max(L.start, Math.min(endMs, L.end || endMs));
+  var lunches = L.lunches.map(function (x) { return { s: x.s, e: Math.min(x.e, end), tag: x.tag }; }).filter(function (x) { return x.e > x.s; });
+  var p = payFor(L.start, end, lunches, L.mult);
+  if (p.secs >= 60) addRecord({ start: L.start, end: end, lunches: lunches, mult: L.mult, auto: L.auto });
+  else D.over[L.iso] = { kind: 'off' };
+  D.live = null;
+}
+function liveCalc(t) {
+  var L = D.live; if (!L) return null;
+  var end = Math.min(t, L.end || t), p = payFor(L.start, end, L.lunches, L.mult), phase = 'work', pe = null;
+  var ln = L.lunches.filter(function (x) { return x.s <= t && t < x.e; })[0];
+  if (ln) { phase = 'lunch'; pe = ln.e; }
+  else { var br = L.breaks.filter(function (x) { return x.s <= t && t < x.e; })[0]; if (br) { phase = 'break'; pe = br.e; } }
+  return { secs: p.secs, gross: p.gross, phase: phase, pe: pe };
+}
+function applySchedule(t) {
+  var L = D.live, ch = false; if (!L) return false;
+  var tl = timeline(L.anchor); if (!tl) return false;
+  tl.phases.forEach(function (ph) {
+    if (ph.s > t || L.start > ph.s) return;
+    if (ph.kind === 'lunch') {
+      if (L.lunches.length) return;
+      L.lunches.push({ s: ph.s, e: ph.e, tag: ph.id }); ch = true;
+    } else if (!L.breaks.some(function (b) { return b.tag === ph.id; })) {
+      L.breaks.push({ s: ph.s, e: ph.e, tag: ph.id }); ch = true;
     }
-    const hourlyAt = h => baseHourly + (isNightHour(h) ? SET.night : 0);
+  });
+  return ch;
+}
+function autoRecord(t) {
+  if (!SET.auto || !SET.confirmed || !SET.trackFrom || hm(SET.sched.start) == null) return false;
+  var ch = false, today = sod(t), cap = new Date(today); cap.setDate(cap.getDate() - 45);
+  var from = parseISO(SET.trackFrom); if (from < cap) from = cap;
+  for (var d = new Date(from); d <= today; d.setDate(d.getDate() + 1)) {
+    var k = isoDay(d);
+    if (D.records.some(function (r) { return r.iso === k; })) continue;
+    if (D.live && D.live.iso === k) continue;
+    var info = dayInfo(d); if (!info.work) continue;
+    var S = schedStartMs(d); if (S == null || S > t) continue;
+    var tl = timeline(S); if (!tl) continue;
+    if (tl.end <= t) {
+      addRecord({ start: S, end: tl.end, lunches: tl.phases.filter(function (p) { return p.kind === 'lunch'; }).map(function (p) { return { s: p.s, e: p.e, tag: p.id }; }), mult: info.mult, auto: true }); ch = true;
+    } else if (!D.live) {
+      D.live = { start: S, anchor: S, end: tl.end, lunches: [], breaks: [], mult: info.mult, auto: true, iso: k }; ch = true;
+      notify('Shift tracking started', 'Counting from ' + tm(S) + ' (your scheduled start).');
+    }
+  }
+  return ch;
+}
+function logic(t, force) {
+  var ch = false, L = D.live;
+  if (L) {
+    if (applySchedule(t)) ch = true;
+    if (L.end && t >= L.end) { finish(L.end); ch = true; notify('Shift complete', 'Clocked out automatically at ' + tm(L.end) + '.'); }
+  }
+  if (force || t - lastAuto > 5000) { lastAuto = t; if (autoRecord(t)) ch = true; }
+  reminders(t);
+  if (ch) { save(); renderAll(); }
+}
+function reminders(t) {
+  var L = D.live; if (!L) return;
+  var lead = SET.remind * MS, spans = L.lunches.map(function (x) { return { s: x.s, e: x.e, k: 'Lunch' }; }).concat(L.breaks.map(function (x) { return { s: x.s, e: x.e, k: 'Break' }; }));
+  spans.forEach(function (x) {
+    var key = x.k + x.s;
+    if (t >= x.s && t < x.e && t >= x.e - lead && !alerted[key + 'w']) { alerted[key + 'w'] = 1; notify(x.k + ' ends in ' + Math.max(1, Math.ceil((x.e - t) / MS)) + ' min', 'Lock your phone and head back. Back at ' + tm(x.e) + '.'); }
+    if (t >= x.e && t - x.e < 60000 && !alerted[key + 'e']) { alerted[key + 'e'] = 1; notify('Back to work', x.k + ' is over.'); }
+  });
+  if (L.end && t >= L.end - lead && t < L.end && !alerted['end' + L.end]) { alerted['end' + L.end] = 1; notify('Shift ends in ' + Math.max(1, Math.ceil((L.end - t) / MS)) + ' min', 'Automatic clock-out at ' + tm(L.end) + '.'); }
+}
 
-    // Integrates gross pay between two timestamps, switching rate at each hour boundary,
-    // so only the minutes inside the night window earn the allowance.
-    function earnBetween(t0, t1) {
-        let total = 0, t = t0;
-        while (t < t1) {
-            const d = new Date(t);
-            let next = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours() + 1).getTime();
-            if (next <= t) next = t + 3600000;
-            const end = Math.min(next, t1);
-            total += ((end - t) / 1000) * (hourlyAt(d.getHours()) / 3600);
-            t = end;
-        }
-        return total;
-    }
-    function totals(t) {
-        t = t == null ? now() : t;
-        let secs = S.accSecs, earn = S.accEarn;
-        if (S.isClockedIn && S.runStart && t > S.runStart) {
-            secs += (t - S.runStart) / 1000;
-            earn += earnBetween(S.runStart, t);
-        }
-        return { secs, earn };
-    }
-    function bankRunAt(t) {
-        if (S.runStart) {
-            if (t > S.runStart) { S.accSecs += (t - S.runStart) / 1000; S.accEarn += earnBetween(S.runStart, t); }
-            S.runStart = null;
-        }
-    }
+/* ================= actions ================= */
+CNXinit();
+function CNXinit() { window.CNX = {}; }
+var C = window.CNX;
+C._t = { get D() { return D; }, get SET() { return SET; }, payFor: payFor, dayInfo: dayInfo, timeline: timeline, logic: logic, get BH() { return BH; }, net: net, recalc: recalc, addRecord: addRecord, startLive: startLive, finish: finish, parseISO: parseISO };
 
-    // ---------- Schedule timeline ----------
-    function hm(str) { const m = /^(\d{1,2}):(\d{2})$/.exec(str || ''); return m ? [+m[1], +m[2]] : null; }
-    function atTime(date, v, dayOffset) { return new Date(date.getFullYear(), date.getMonth(), date.getDate() + dayOffset, v[0], v[1], 0, 0).getTime(); }
+C.toggleClock = function () {
+  ensureAudio();
+  if (!D.live) { startLive(Date.now(), false); } else { finish(Date.now()); }
+  save(); logic(Date.now(), true); renderAll();
+};
+C.toggleLunch = function () {
+  var L = D.live; if (!L) return; ensureAudio(); var t = Date.now();
+  var cur = L.lunches.filter(function (x) { return x.s <= t && t < x.e; })[0];
+  if (cur) cur.e = t;
+  else {
+    if (L.lunches.length && !confirm('You already had lunch in this shift. Start another unpaid lunch?')) return;
+    L.lunches.push({ s: t, e: t + LUNCH_MIN * MS, tag: 'm' });
+  }
+  save(); renderAll();
+};
+C.toggleBreak = function () {
+  var L = D.live; if (!L) return; ensureAudio(); var t = Date.now();
+  if (L.lunches.some(function (x) { return x.s <= t && t < x.e; })) return;
+  var cur = L.breaks.filter(function (x) { return x.s <= t && t < x.e; })[0];
+  if (cur) cur.e = t; else L.breaks.push({ s: t, e: t + BREAK_MIN * MS, tag: 'm' });
+  save(); renderAll();
+};
+C.discard = function () {
+  var L = D.live; if (!L) return;
+  if (!confirm('Discard this shift? Nothing is saved and this day is marked as off so it is not tracked again.')) return;
+  D.over[L.iso] = { kind: 'off' }; D.live = null; save(); renderAll();
+};
+C.openClockIn = function () {
+  var t = Date.now(), L = D.live, def;
+  if (L) def = L.start; else { var S = schedStartMs(sod(t)); def = S != null && S <= t ? S : t; }
+  openSheet('<div class="sheethead"><h3>' + (L ? 'Change start time' : 'Clock in at a set time') + '</h3><button class="x" onclick="CNX.closeSheet()">' + ic('x') + '</button></div>' +
+    '<div class="field"><label for="ciTime">Shift started at</label><input type="datetime-local" id="ciTime" value="' + dtl(def) + '"></div>' +
+    '<p class="hint">Pay counts from this time. Breaks and lunch follow your schedule.</p><button class="btn primary" style="margin-top:12px" onclick="CNX.confirmClockIn()">' + (L ? 'Update' : 'Start shift') + '</button>');
+};
+C.confirmClockIn = function () {
+  var ms = new Date($('ciTime').value).getTime(), t = Date.now();
+  if (isNaN(ms)) { alert('Pick a start time.'); return; }
+  if (ms > t + 60000) { alert('The start time cannot be in the future.'); return; }
+  if (ms < t - 36 * 3600000) { alert('That is too long ago. Use the Calendar to log an older shift.'); return; }
+  if (D.live) { var L = D.live; L.start = ms; L.anchor = anchorFor(ms); var tl = timeline(L.anchor); L.end = tl && tl.end > ms ? tl.end : null; L.lunches = []; L.breaks = []; L.iso = isoDay(new Date(ms)); }
+  else startLive(ms, false);
+  save(); closeSheet(); logic(Date.now(), true); renderAll();
+};
 
-    function timeline(anchor) {
-        const sc = SET.sched, sh = hm(sc.start);
-        if (!sh) return null;
-        const base = new Date(anchor);
-        let start = null, best = Infinity;
-        [-1, 0, 1].forEach(off => { const c = atTime(base, sh, off), d = Math.abs(c - anchor); if (d < best) { best = d; start = c; } });
-        const startDate = new Date(start);
-        const events = [], lunchSpans = [];
-        let unpaidMs = 0;
-        [['b1', sc.b1, BREAK_MIN, 'break'], ['lunch', sc.lunch, LUNCH_MIN, 'lunch'], ['b2', sc.b2, BREAK_MIN, 'break']].forEach(it => {
-            const v = hm(it[1]); if (!v) return;
-            let s = atTime(startDate, v, 0); if (s < start) s = atTime(startDate, v, 1);
-            const e = s + it[2] * 60000;
-            events.push({ id: it[0] + 's', t: s, kind: it[3], isStart: true, end: e });
-            events.push({ id: it[0] + 'e', t: e, kind: it[3], isStart: false });
-            if (it[3] === 'lunch') { lunchSpans.push([s, e]); unpaidMs += it[2] * 60000; }
-        });
-        if (!lunchSpans.length) unpaidMs = 0;
-        const end = start + SHIFT_PAID_HOURS * 3600000 + unpaidMs;
-        events.push({ id: 'end', t: end, kind: 'end', isStart: false });
-        events.sort((a, b) => a.t - b.t);
-        return { start, end, events, lunchSpans };
-    }
+/* ---- day sheet ---- */
+function openSheet(html) { $('sheetBody').innerHTML = html; $('sheet').classList.add('on'); document.body.style.overflow = 'hidden'; }
+C.closeSheet = function () { $('sheet').classList.remove('on'); document.body.style.overflow = ''; };
+function recNet(r) { return net(r.gross || 0); }
+function dayHTML(k) {
+  var d = parseISO(k), info = dayInfo(d), L = D.live, recs = D.records.filter(function (r) { return r.iso === k; }), ov = info.ov ? info.ov.kind : 'auto';
+  var h = '<div class="sheethead"><h3>' + d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + '</h3><button class="x" onclick="CNX.closeSheet()">' + ic('x') + '</button></div><div>';
+  if (info.hol) h += '<span class="chip hol">★ ' + esc(info.hol) + ' · pays ×' + SET.holidayMult + ' if worked</span>';
+  h += info.work ? '<span class="chip ok">Working day</span>' : '<span class="chip">Day off' + (info.rotOff && !info.ov ? ' (rotation)' : '') + '</span>';
+  h += '</div><div class="list" style="margin:10px 0">';
+  if (L && L.iso === k) { var v = liveCalc(Date.now()); h += '<div class="item"><div><b>' + tm(L.start) + ' – now</b><small>In progress</small></div><div class="r"><b class="g mono">' + money(net(v.gross)) + '</b><small class="mono">gross ' + money(v.gross) + '</small></div></div>'; }
+  recs.forEach(function (r) {
+    h += '<div class="item"><div><b>' + (r.legacy ? esc(r.label) : tm(r.start) + ' – ' + tm(r.end)) + (r.mult > 1 ? ' <span class="chip hol">×' + r.mult + '</span>' : '') + (r.auto ? ' <span class="chip">auto</span>' : '') + '</b><small>' + (r.legacy ? esc(r.duration) : fmtHM(r.secs) + ' paid') + '</small></div>' +
+      '<div class="row"><div class="r"><b class="g mono">' + money(recNet(r)) + '</b><small class="mono">gross ' + money(r.gross) + '</small></div>' +
+      (r.legacy ? '' : '<button class="xbtn" aria-label="Edit" onclick="CNX.shiftForm(\'' + k + '\',\'' + r.id + '\')">' + ic('edit') + '</button>') +
+      '<button class="xbtn" aria-label="Delete" onclick="CNX.delShift(\'' + r.id + '\')">' + ic('trash') + '</button></div></div>';
+  });
+  if (!recs.length && !(L && L.iso === k)) h += '<div class="empty">No shift recorded for this day.</div>';
+  h += '</div><button class="btn primary" onclick="CNX.shiftForm(\'' + k + '\')">+ Log a shift</button>';
+  h += '<h2 class="t" style="margin:16px 0 0">This day counts as</h2><div class="seg">' +
+    ['auto', 'off', 'work'].map(function (x) { return '<button class="' + (ov === x ? 'on' : '') + '" onclick="CNX.setKind(\'' + k + '\',\'' + x + '\')">' + { auto: 'Follow schedule', off: 'Day off', work: 'Working' }[x] + '</button>'; }).join('') + '</div>' +
+    '<label class="chk"><input type="checkbox" ' + (info.hol ? 'checked' : '') + ' onchange="CNX.toggleHoliday(\'' + k + '\')"> Public holiday</label>';
+  return h;
+}
+C.openDay = function (k) { curDay = k; openSheet(dayHTML(k)); };
+function refreshSheet() { if (curDay && $('sheet').classList.contains('on')) $('sheetBody').innerHTML = dayHTML(curDay); }
+C.setKind = function (k, kind) { if (kind === 'auto') delete D.over[k]; else D.over[k] = { kind: kind }; save(); renderAll(); refreshSheet(); };
+C.toggleHoliday = function (k) {
+  var info = dayInfo(parseISO(k));
+  if (info.hol) {
+    var i = -1; SET.holidays.forEach(function (h, n) { if (h.d === k) i = n; });
+    if (i > -1) SET.holidays.splice(i, 1); else if (SET.holidaysOff.indexOf(k) < 0) SET.holidaysOff.push(k);
+  } else {
+    var j = SET.holidaysOff.indexOf(k); if (j > -1) SET.holidaysOff.splice(j, 1);
+    if (!holidayName(parseISO(k))) { var n = prompt('Holiday name (optional)', 'Holiday'); SET.holidays.push({ d: k, n: n || 'Holiday' }); }
+  }
+  saveSet(); renderAll(); renderRot(); refreshSheet();
+};
+C.delShift = function (id) {
+  var r = D.records.filter(function (x) { return String(x.id) === String(id); })[0]; if (!r) return;
+  if (!confirm('Delete this shift? The day will be marked as off so it is not re-created automatically.')) return;
+  D.records = D.records.filter(function (x) { return x !== r; });
+  if (!D.records.some(function (x) { return x.iso === r.iso; })) D.over[r.iso] = { kind: 'off' };
+  save(); renderAll(); refreshSheet();
+};
+C.shiftForm = function (k, id) {
+  var d = parseISO(k), info = dayInfo(d), r = id ? D.records.filter(function (x) { return String(x.id) === String(id); })[0] : null, s, e, lm, mult;
+  if (r) { s = r.start; e = r.end; lm = Math.round((r.lunches || []).reduce(function (a, l) { return a + (l.e - l.s); }, 0) / MS); mult = r.mult; }
+  else { s = schedStartMs(d); if (s == null) s = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9).getTime(); var tl = timeline(s); e = tl ? tl.end : s + 9 * 3600000; lm = tl && tl.phases.some(function (p) { return p.kind === 'lunch'; }) ? LUNCH_MIN : 0; mult = info.mult; }
+  openSheet('<div class="sheethead"><h3>' + (r ? 'Edit shift' : 'Log a shift') + '</h3><button class="x" onclick="CNX.openDay(\'' + k + '\')">' + ic('x') + '</button></div>' +
+    '<div class="field"><label for="sfStart">Started</label><input type="datetime-local" id="sfStart" value="' + dtl(s) + '"></div>' +
+    '<div class="field"><label for="sfEnd">Ended</label><input type="datetime-local" id="sfEnd" value="' + dtl(e) + '"></div>' +
+    '<div class="grid2"><div class="field"><label for="sfLunch">Unpaid lunch (min)</label><input type="number" id="sfLunch" min="0" max="240" inputmode="numeric" value="' + lm + '"></div>' +
+    '<div class="field"><label for="sfMult">Pay multiplier ×</label><input type="number" id="sfMult" min="0.5" max="5" step="0.5" inputmode="decimal" value="' + mult + '"></div></div>' +
+    '<p class="hint">Pay is calculated from these times, with night hours handled automatically.</p>' +
+    '<button class="btn primary" style="margin-top:12px" onclick="CNX.saveShift(\'' + k + '\',\'' + (id || '') + '\')">Save shift</button>');
+};
+C.saveShift = function (k, id) {
+  var s = new Date($('sfStart').value).getTime(), e = new Date($('sfEnd').value).getTime(), lm = Math.max(0, +$('sfLunch').value || 0), mult = Math.max(0.5, +$('sfMult').value || 1);
+  if (isNaN(s) || isNaN(e)) { alert('Enter both times.'); return; }
+  if (e <= s) { alert('The end must be after the start.'); return; }
+  if (e - s > 24 * 3600000) { alert('A shift cannot be longer than 24 hours.'); return; }
+  if (id) D.records = D.records.filter(function (x) { return String(x.id) !== String(id); });
+  addRecord({ id: id || null, start: s, end: e, lunches: placeLunch(s, e, lm), mult: mult, auto: false });
+  var iso = isoDay(new Date(s)); if (D.over[iso] && D.over[iso].kind === 'off') delete D.over[iso];
+  save(); renderAll(); curDay = iso; openSheet(dayHTML(iso));
+};
 
-    function projectedGross() {
-        const tl = SET.sched.enabled ? timeline(S.isClockedIn && S.shiftStart ? S.shiftStart : now()) : null;
-        if (!tl) return baseHourly * SHIFT_PAID_HOURS;
-        let t = tl.start, total = 0;
-        tl.lunchSpans.slice().sort((a, b) => a[0] - b[0]).forEach(sp => { total += earnBetween(t, sp[0]); t = sp[1]; });
-        return total + earnBetween(t, tl.end);
+/* ================= rendering ================= */
+function status(t) {
+  var L = D.live;
+  if (L) {
+    var v = liveCalc(t);
+    if (v.phase === 'lunch') return { txt: 'Lunch (unpaid) · ' + cd(v.pe - t) + ' left', cls: 'lunch' };
+    if (v.phase === 'break') return { txt: 'Break (paid) · ' + cd(v.pe - t) + ' left', cls: 'brk' };
+    return { txt: 'Shift in progress', cls: 'on' };
+  }
+  var td = new Date(t), info = dayInfo(td);
+  if (D.records.some(function (r) { return r.iso === info.key; })) return { txt: 'Shift done', cls: '' };
+  if (info.hol && !info.work) return { txt: 'Public holiday', cls: 'hol' };
+  if (!info.work) return { txt: 'Day off', cls: '' };
+  var S = schedStartMs(td); if (S != null && S > t) return { txt: 'Starts ' + tm(S), cls: '' };
+  return { txt: 'Not clocked in', cls: '' };
+}
+function nextText(t) {
+  var L = D.live;
+  if (L) {
+    var v = liveCalc(t);
+    if (v.phase !== 'work') return (v.phase === 'lunch' ? 'Lunch' : 'Break') + ' ends at ' + tm(v.pe) + ' (in ' + inTxt(v.pe - t) + ')';
+    var tl = timeline(L.anchor), ev = [];
+    if (tl) {
+      tl.phases.forEach(function (p) { if (p.s > t && L.start <= p.s) ev.push([p.s, (p.kind === 'lunch' ? 'Lunch' : 'Break') + ' starts']); });
+      if (L.end) ev.push([L.end, 'Shift ends']);
     }
+    ev = ev.filter(function (x) { return x[0] > t; }).sort(function (a, b) { return a[0] - b[0]; });
+    return ev.length ? 'Next: ' + ev[0][1] + ' at ' + tm(ev[0][0]) + ' (in ' + inTxt(ev[0][0] - t) + ')' : '';
+  }
+  if (hm(SET.sched.start) == null) return 'Set your shift start time in Settings.';
+  for (var i = 0; i < 60; i++) {
+    var d = new Date(); d.setTime(t); d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + i);
+    if (!dayInfo(d).work) continue;
+    var S = schedStartMs(d); if (S <= t) continue;
+    var label = i === 0 ? 'today' : i === 1 ? 'tomorrow' : d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    return 'Next shift: ' + label + ' at ' + tm(S) + ' (in ' + inTxt(S - t) + ')' + (SET.auto && SET.confirmed ? ' · starts by itself' : '');
+  }
+  return '';
+}
+function paint(t) {
+  var v = liveCalc(t), g = v ? v.gross : 0, s = v ? v.secs : 0;
+  $('liveCounter').textContent = money(net(g)); $('grossDisplay').textContent = money(g);
+  $('workedTime').textContent = fmtHMS(s); $('bar').style.width = Math.min(100, s / (PAID_H * 3600) * 100) + '%';
+  var st = status(t), b = $('statusBadge'); if (b.textContent !== st.txt) b.textContent = st.txt; b.className = 'badge ' + st.cls;
+  var night = !!D.live && v.phase !== 'lunch' && isNight(new Date(t).getHours()), nb = $('nightBadge');
+  nb.style.display = night ? '' : 'none'; if (night) nb.textContent = 'Night allowance +' + SET.night.toFixed(2) + '/h active';
+}
+function monthStats(y, m) {
+  var by = {}, gross = 0, days = {};
+  D.records.forEach(function (r) { var d = parseISO(r.iso); if (d.getFullYear() === y && d.getMonth() === m) { by[r.iso] = (by[r.iso] || 0) + r.gross; gross += r.gross; days[r.iso] = 1; } });
+  var L = D.live; if (L) { var d2 = parseISO(L.iso); if (d2.getFullYear() === y && d2.getMonth() === m) { var g = liveCalc(Date.now()).gross; by[L.iso] = (by[L.iso] || 0) + g; gross += g; days[L.iso] = 1; } }
+  return { by: by, gross: gross, days: Object.keys(days).length };
+}
+function renderLive() {
+  var t = Date.now(), on = !!D.live, v = liveCalc(t);
+  var cb = $('clockBtn'); cb.className = 'btn ' + (on ? 'stop' : 'primary'); cb.innerHTML = on ? ic('stop') + '<span>Clock out</span>' : ic('play') + '<span>Clock in now</span>';
+  var inLunch = on && v.phase === 'lunch', inBreak = on && v.phase === 'break';
+  $('lunchBtn').disabled = !on; $('breakBtn').disabled = !on || inLunch; $('discardBtn').style.visibility = on ? 'visible' : 'hidden';
+  $('lunchLabel').textContent = inLunch ? 'Resume work' : 'Lunch (45m, unpaid)'; $('breakLabel').textContent = inBreak ? 'Back from break' : 'Break (15m, paid)';
+  $('setStartBtn').textContent = on ? 'Change start time' : 'Clock in at a set time';
+  $('taxLabel').textContent = +SET.tax;
+  var info = dayInfo(new Date(t)), chips = '';
+  if (info.hol) chips += '<span class="chip hol">★ ' + esc(info.hol) + (info.work ? ' · pays ×' + SET.holidayMult : ' · day off') + '</span>';
+  else chips += info.work ? '<span class="chip ok">Working day</span>' : '<span class="chip">Day off today</span>';
+  if (on && D.live.mult > 1) chips += '<span class="chip hol">×' + D.live.mult + ' pay</span>';
+  $('todayChips').innerHTML = chips;
+  $('rateHour').textContent = money(net(BH)); $('rateMin').textContent = money(net(BH / 60)); $('rateNight').textContent = money(net(BH + SET.night));
+  var S = schedStartMs(sod(t)), tl = S != null ? timeline(S) : null, proj;
+  if (tl) proj = payFor(S, tl.end, tl.phases.filter(function (p) { return p.kind === 'lunch'; }).map(function (p) { return { s: p.s, e: p.e }; }), 1).gross; else proj = BH * PAID_H;
+  $('shiftGoal').textContent = money(net(proj)) + ' EGP';
+  var d = new Date(), ms = monthStats(d.getFullYear(), d.getMonth());
+  $('monthNet').textContent = money(net(ms.gross)); $('monthGross').textContent = money(ms.gross); $('monthDays').textContent = ms.days + ' day' + (ms.days === 1 ? '' : 's') + ' worked';
+  var n = '';
+  if (!SET.confirmed) n += '<div class="card warn"><b>Automatic tracking is waiting.</b><p class="sub" style="margin:4px 0 10px">Check your real shift times and days off, then confirm. Until then nothing is recorded for you.</p><button class="btn sm cy" onclick="CNX.gotoSchedule()">Check my schedule</button></div>';
+  if (D.lastSeen !== APP_VERSION) n += '<div class="card info"><div class="row between"><b>Updated to v' + APP_VERSION + '</b><button class="xbtn" onclick="CNX.dismissNew()">' + ic('x') + '</button></div><p class="sub" style="margin:4px 0 10px">Auto tracking, rotating days off, holidays, tappable calendar and more.</p><button class="btn sm cy" onclick="CNX.showChangelog()">What\'s new</button></div>';
+  $('notices').innerHTML = n;
+  $('nextEventText').textContent = nextText(t);
+  paint(t);
+}
+function renderCal() {
+  var y = viewDate.getFullYear(), m = viewDate.getMonth(), t = Date.now(), today = isoDay(new Date(t));
+  $('monthLabel').textContent = MONTHS[m] + ' ' + y;
+  $('calHead').innerHTML = DOW.map(function (x) { return '<div class="dow">' + x + '</div>'; }).join('');
+  var ms = monthStats(y, m), start = new Date(y, m, 1).getDay() - 1; if (start < 0) start = 6;
+  var dim = new Date(y, m + 1, 0).getDate(), h = '';
+  for (var i = 0; i < start; i++) h += '<div class="cell pad"></div>';
+  for (var day = 1; day <= dim; day++) {
+    var d = new Date(y, m, day), k = isoDay(d), info = dayInfo(d), g = ms.by[k], cls = 'cell', v = '', past = k < today;
+    if (g != null) { cls += ' work'; v = Math.round(net(g)).toLocaleString('en-US'); }
+    else if (!info.work) { cls += ' off'; v = info.hol ? 'Holiday' : 'Off'; }
+    else if (past && SET.confirmed && SET.trackFrom && k >= SET.trackFrom) { cls += ' miss'; v = '—'; }
+    else v = '';
+    if (info.hol) cls += ' hol';
+    if (k === today) cls += ' today';
+    h += '<button class="' + cls + '" onclick="CNX.openDay(\'' + k + '\')"><div class="dn"><span>' + day + '</span><span>' + (info.hol ? '★' : '') + '</span></div><div class="v mono">' + v + '</div></button>';
+  }
+  $('calGrid').innerHTML = h;
+  $('cDays').textContent = ms.days; $('cNet').textContent = Math.round(net(ms.gross)).toLocaleString('en-US'); $('cGross').textContent = Math.round(ms.gross).toLocaleString('en-US');
+  var list = D.records.filter(function (r) { var d = parseISO(r.iso); return d.getFullYear() === y && d.getMonth() === m; });
+  $('monthList').innerHTML = list.length ? list.map(function (r) {
+    return '<button class="item" onclick="CNX.openDay(\'' + r.iso + '\')"><div><b>' + parseISO(r.iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) + '</b><small>' + (r.legacy ? esc(r.duration) : tm(r.start) + ' – ' + tm(r.end) + ' · ' + fmtHM(r.secs)) + (r.mult > 1 ? ' · ×' + r.mult : '') + (r.auto ? ' · auto' : '') + '</small></div><div class="r"><b class="g mono">' + money(recNet(r)) + '</b><small class="mono">gross ' + money(r.gross) + '</small></div></button>';
+  }).join('') : '<div class="empty">No shifts recorded this month.</div>';
+}
+function renderAll() { renderLive(); renderCal(); }
 
-    // ---------- Phase (break / lunch) handling ----------
-    function startLunchAt(at, endAt) {
-        if (S.isOnLunch) return;
-        bankRunAt(at);
-        S.isOnLunch = true; S.isOnShortBreak = false;
-        S.phaseEnd = endAt || at + LUNCH_MIN * 60000;
-    }
-    function startBreakAt(at, endAt) {
-        if (S.isOnLunch) return;
-        S.isOnShortBreak = true;
-        S.phaseEnd = endAt || at + BREAK_MIN * 60000;
-    }
-    function endPhaseAt(at, n, announce) {
-        const wasLunch = S.isOnLunch;
-        if (wasLunch) { S.isOnLunch = false; S.runStart = at; }
-        S.isOnShortBreak = false; S.phaseEnd = null;
-        if (announce && n - at < 60000) notify('Back to work', wasLunch ? 'Lunch is over. The pay clock is running again.' : 'Break is over.');
-    }
-    function clockOutAt(t) {
-        const tot = totals(t);
-        const id = S.shiftStart || Date.now();
-        if (tot.earn > 1 && !S.history.some(h => h.id === id)) {      // id check prevents duplicates from two devices
-            const started = new Date(S.shiftStart || t);
-            S.history.unshift({
-                id: id, iso: isoDay(started), date: legacyDay(started), time: timeStr(started.getTime()),
-                duration: fmt(tot.secs), gross: tot.earn.toFixed(2), net: net(tot.earn).toFixed(2)
-            });
-        }
-        S.isClockedIn = false; S.isOnLunch = false; S.isOnShortBreak = false;
-        S.runStart = null; S.accSecs = 0; S.accEarn = 0; S.shiftStart = null; S.phaseEnd = null; S.fired = [];
-    }
+/* ================= settings UI ================= */
+function writeSettings() {
+  $('pkgSel').value = SET.pkg; $('customPkg').value = SET.customPkg || ''; $('customPkg').style.display = SET.pkg === 'custom' ? '' : 'none';
+  $('kpiAmount').value = SET.kpiAmount || 0; $('kpiAmount').disabled = SET.probation; $('taxInput').value = SET.tax; $('holMult').value = SET.holidayMult;
+  $('nightAllow').value = SET.night; $('nightStart').value = SET.nightStart; $('nightEnd').value = SET.nightEnd; $('remindIn').value = SET.remind;
+  $('schedStart').value = SET.sched.start || ''; $('schedB1').value = SET.sched.b1 || ''; $('schedLunch').value = SET.sched.lunch || ''; $('schedB2').value = SET.sched.b2 || '';
+  $('autoChk').checked = !!SET.auto;
+  var pb = $('probBtn'); pb.textContent = SET.probation ? 'Probation (KPI off)' : 'Post-probation (KPI on)'; pb.className = 'badge ' + (SET.probation ? 'on' : 'brk');
+  $('presetNow').textContent = SET.preset || 'Custom';
+  $('confirmBox').innerHTML = SET.confirmed ? '<span class="chip ok">Schedule confirmed' + (SET.trackFrom ? ' · tracking since ' + SET.trackFrom : '') + '</span>' : '<button class="btn primary" onclick="CNX.confirmSchedule()">Confirm my schedule and start tracking</button>';
+  renderPresets();
+}
+C.readSettings = function () {
+  function num(id, d, lo, hi) { var v = parseFloat($(id).value); return isNaN(v) ? d : Math.min(hi, Math.max(lo, v)); }
+  SET.pkg = $('pkgSel').value; SET.customPkg = num('customPkg', 0, 0, 1e6); SET.kpiAmount = num('kpiAmount', 0, 0, 1e6);
+  SET.tax = num('taxInput', 15, 0, 60); SET.holidayMult = num('holMult', 2, 1, 5); SET.night = num('nightAllow', 6.85, 0, 1000);
+  SET.nightStart = Math.round(num('nightStart', 18, 0, 23)); SET.nightEnd = Math.round(num('nightEnd', 6, 0, 23)); SET.remind = Math.round(num('remindIn', 7, 1, 30));
+  SET.sched = { start: $('schedStart').value, b1: $('schedB1').value, lunch: $('schedLunch').value, b2: $('schedB2').value };
+  $('customPkg').style.display = SET.pkg === 'custom' ? '' : 'none';
+  saveSet(); recalc(); renderAll();
+};
+C.toggleProbation = function () { SET.probation = !SET.probation; saveSet(); recalc(); writeSettings(); renderAll(); };
+C.toggleAuto = function () {
+  SET.auto = $('autoChk').checked;
+  if (SET.auto && SET.confirmed) SET.trackFrom = isoDay(new Date());
+  saveSet(); writeSettings(); logic(Date.now(), true); renderAll();
+};
+C.confirmSchedule = function () {
+  if (hm(SET.sched.start) == null) { alert('Enter your shift start time first.'); return; }
+  SET.confirmed = true; SET.trackFrom = isoDay(new Date()); saveSet(); writeSettings(); logic(Date.now(), true); renderAll();
+  notify('Schedule confirmed', 'Shifts are now tracked automatically from today.');
+};
+C.gotoSchedule = function () { C.tab('set'); var s = $('secSched'); s.open = true; $('secRot').open = true; s.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+C.applyPayslip = function () {
+  var base = parseFloat($('calBase').value), kpi = parseFloat($('calKpi').value), g = parseFloat($('calGross').value), n = parseFloat($('calNet').value), msg = [];
+  if (g > 0 && n > 0 && n <= g) { SET.tax = +(((g - n) / g) * 100).toFixed(1); msg.push('deductions ' + SET.tax + '%'); }
+  if (base > 0) { SET.pkg = 'custom'; SET.customPkg = base; msg.push('base ' + base); }
+  if (!isNaN(kpi) && kpi >= 0) { SET.kpiAmount = kpi; if (kpi > 0) SET.probation = false; msg.push('KPI ' + kpi); }
+  $('calMsg').textContent = msg.length ? 'Applied: ' + msg.join(', ') + '.' : 'Nothing to apply. Fill gross and net, base, or KPI.';
+  saveSet(); recalc(); writeSettings(); renderAll();
+};
+function renderRot() {
+  var R = SET.rot, h = '<div class="grid2"><div class="field"><label for="rotWeeks">Cycle length</label><select id="rotWeeks" onchange="CNX.setRotWeeks(this.value)">';
+  for (var i = 1; i <= 6; i++) h += '<option value="' + i + '"' + (R.weeks === i ? ' selected' : '') + '>' + i + ' week' + (i > 1 ? 's' : '') + '</option>';
+  h += '</select></div><div class="field"><label for="rotAnchor">Week 1 is the week of</label><input type="date" id="rotAnchor" value="' + R.anchor + '" onchange="CNX.setRotAnchor(this.value)"></div></div>';
+  for (var w = 0; w < R.weeks; w++) {
+    var row = R.off[w] || [], cnt = row.filter(Boolean).length;
+    h += '<div class="rotrow"><span>Week ' + (w + 1) + '</span>' + DOW.map(function (n, di) { return '<button class="dbtn ' + (row[di] ? 'off' : '') + '" onclick="CNX.toggleRot(' + w + ',' + di + ')">' + n + '</button>'; }).join('') + '</div><p class="hint" style="margin:0 0 4px 57px">' + cnt + ' day' + (cnt === 1 ? '' : 's') + ' off</p>';
+  }
+  h += '<p class="hint">Highlighted days are days off. Set your real rotation, then your Calendar shows it.</p>';
+  $('rotBox').innerHTML = h;
+  var hh = SET.holidays.slice().sort(function (a, b) { return a.d < b.d ? -1 : 1; });
+  $('holBox').innerHTML = hh.length ? hh.map(function (x, i) { return '<div class="item"><span><b>' + esc(x.n) + '</b> <small style="display:inline">' + x.d + '</small></span><button class="xbtn" onclick="CNX.delHoliday(\'' + x.d + '\')">' + ic('x') + '</button></div>'; }).join('') : '<div class="empty" style="padding:6px 0">No custom holidays added.</div>';
+}
+C.setRotWeeks = function (v) {
+  var n = Math.max(1, Math.min(6, +v || 1)), R = SET.rot;
+  while (R.off.length < n) R.off.push(R.off[R.off.length - 1] ? R.off[R.off.length - 1].slice() : [false, false, false, false, true, true, false]);
+  R.weeks = n; saveSet(); renderRot(); renderAll();
+};
+C.setRotAnchor = function (v) { if (!v) return; SET.rot.anchor = mondayISO(parseISO(v)); saveSet(); renderRot(); renderAll(); };
+C.toggleRot = function (w, d) { SET.rot.off[w][d] = !SET.rot.off[w][d]; saveSet(); renderRot(); renderAll(); };
+C.addHoliday = function () {
+  var d = $('holDate').value; if (!d) { alert('Pick a date.'); return; }
+  SET.holidays = SET.holidays.filter(function (x) { return x.d !== d; }); SET.holidays.push({ d: d, n: $('holName').value.trim() || 'Holiday' });
+  var j = SET.holidaysOff.indexOf(d); if (j > -1) SET.holidaysOff.splice(j, 1);
+  $('holName').value = ''; saveSet(); renderRot(); renderAll();
+};
+C.delHoliday = function (d) { SET.holidays = SET.holidays.filter(function (x) { return x.d !== d; }); saveSet(); renderRot(); renderAll(); };
 
-    // Runs ~once per second and on tab focus: applies every scheduled event that is due,
-    // at its true timestamp, even if the app was closed when it happened.
-    function logicTick() {
-        if (!S.isClockedIn) return;
-        const n = now();
-        let changed = false;
-        const tl = SET.sched.enabled ? timeline(S.shiftStart || n) : null;
-        if (tl) {
-            for (const ev of tl.events) {
-                if (ev.t > n) break;
-                if (S.fired.indexOf(ev.id) > -1) continue;
-                S.fired.push(ev.id); changed = true;
-                if (ev.id === 'end') { if (ev.t > S.shiftStart) { clockOutAt(ev.t); notify('Shift complete', 'You were clocked out automatically.'); } }
-                else if (ev.isStart) {
-                    if (ev.end > S.shiftStart) { const at = Math.max(ev.t, S.shiftStart); ev.kind === 'lunch' ? startLunchAt(at, ev.end) : startBreakAt(at, ev.end); }
-                } else if (ev.t > S.shiftStart) {
-                    if (ev.kind === 'lunch' ? S.isOnLunch : S.isOnShortBreak) endPhaseAt(ev.t, n, true);
-                }
-                if (!S.isClockedIn) break;
-            }
-        }
-        if (S.isClockedIn && (S.isOnLunch || S.isOnShortBreak) && S.phaseEnd && n >= S.phaseEnd) {
-            endPhaseAt(S.phaseEnd, n, true); changed = true;       // manual breaks end on their own too
-        }
-        if (S.isClockedIn) {
-            if ((S.isOnLunch || S.isOnShortBreak) && S.phaseEnd) {
-                const at = S.phaseEnd - SET.remind * 60000;
-                if (n >= at && n < S.phaseEnd && lastRemind !== S.phaseEnd) {
-                    lastRemind = S.phaseEnd;
-                    const m = Math.max(1, Math.ceil((S.phaseEnd - n) / 60000));
-                    notify((S.isOnLunch ? 'Lunch' : 'Break') + ' ends in ' + m + ' min', 'Lock your phone and head back. Back at ' + timeStr(S.phaseEnd) + '.');
-                }
-            }
-            if (tl) {
-                const at = tl.end - SET.remind * 60000;
-                if (n >= at && n < tl.end && lastEndRemind !== tl.end) {
-                    lastEndRemind = tl.end;
-                    notify('Shift ends in ' + Math.max(1, Math.ceil((tl.end - n) / 60000)) + ' min', 'Auto clock-out at ' + timeStr(tl.end) + '.');
-                }
-            }
-        }
-        if (changed) { save(); refreshAll(); }
-    }
+/* ---- presets ---- */
+function presetList() { return safeJSON('cnx3_presets') || []; }
+function renderPresets() {
+  var h = '<option value="__builtin">Walmart Alex (Concentrix)</option>' + presetList().map(function (p) { return '<option value="' + esc(p.name) + '">' + esc(p.name) + '</option>'; }).join('');
+  $('presetSel').innerHTML = h;
+}
+C.loadPreset = function () {
+  var v = $('presetSel').value, src;
+  if (v === '__builtin') src = defaultSet(); else { var p = presetList().filter(function (x) { return x.name === v; })[0]; if (!p) return; src = p.set; }
+  if (!confirm('Replace your pay, schedule and days-off settings with this preset?')) return;
+  ['pkg', 'customPkg', 'probation', 'kpiAmount', 'night', 'nightStart', 'nightEnd', 'tax', 'holidayMult', 'remind', 'sched', 'rot'].forEach(function (k) { if (src[k] !== undefined) SET[k] = JSON.parse(JSON.stringify(src[k])); });
+  SET.preset = v === '__builtin' ? 'Walmart Alex (Concentrix)' : v; saveSet(); recalc(); writeSettings(); renderRot(); renderAll();
+};
+C.savePreset = function () {
+  var n = prompt('Name this preset (e.g. the account name)', ''); if (!n) return; n = n.trim().slice(0, 40); if (!n) return;
+  var o = {}; ['pkg', 'customPkg', 'probation', 'kpiAmount', 'night', 'nightStart', 'nightEnd', 'tax', 'holidayMult', 'remind', 'sched', 'rot'].forEach(function (k) { o[k] = JSON.parse(JSON.stringify(SET[k])); });
+  var l = presetList().filter(function (x) { return x.name !== n; }); l.push({ name: n, set: o }); store('cnx3_presets', l);
+  SET.preset = n; saveSet(); writeSettings(); $('presetSel').value = n;
+};
+C.deletePreset = function () {
+  var v = $('presetSel').value; if (v === '__builtin') { alert('The built-in preset cannot be deleted.'); return; }
+  if (!confirm('Delete preset "' + v + '"?')) return; store('cnx3_presets', presetList().filter(function (x) { return x.name !== v; })); renderPresets();
+};
 
-    function updateNextEvent() {
-        const el = $('nextEventText');
-        if (!SET.sched.enabled) { el.textContent = 'Auto schedule is off. Manual breaks still end by themselves (15 / 45 min).'; return; }
-        const n = now();
-        const tl = timeline(S.isClockedIn && S.shiftStart ? S.shiftStart : n);
-        if (!tl) { el.textContent = 'Set your shift start time in Pay & Log.'; return; }
-        const ev = tl.events.find(e => e.t > n && (!S.isClockedIn || S.shiftStart < e.t));
-        if (!ev) { el.textContent = ''; return; }
-        const mins = Math.max(0, Math.round((ev.t - n) / 60000));
-        const label = ev.id === 'end' ? 'Shift ends' : (ev.kind === 'lunch' ? 'Lunch' : 'Break') + (ev.isStart ? ' starts' : ' ends');
-        el.textContent = 'Next: ' + label + ' at ' + timeStr(ev.t) + ' (in ' + (mins >= 60 ? Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm' : mins + ' min') + ')';
-    }
+/* ================= alerts ================= */
+function ensureAudio() { try { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch (e) {} }
+function beep() {
+  if (!audioCtx) return;
+  try { [0, 0.35, 0.7].forEach(function (off) { var o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.frequency.value = 880; o.connect(g); g.connect(audioCtx.destination); var t = audioCtx.currentTime + off; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25); o.start(t); o.stop(t + 0.3); }); } catch (e) {}
+}
+function notify(title, body) {
+  var el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status');
+  el.innerHTML = '<span style="color:#fbbf24;font-size:18px">' + ic('bell') + '</span><div style="flex:1"><b>' + esc(title) + '</b><span>' + esc(body) + '</span></div><button class="xbtn" aria-label="Dismiss">' + ic('x') + '</button>';
+  el.querySelector('button').onclick = function () { el.remove(); };
+  $('toasts').appendChild(el); setTimeout(function () { el.remove(); }, 25000);
+  try { if (navigator.vibrate) navigator.vibrate([300, 150, 300]); } catch (e) {}
+  beep();
+  try { if ('Notification' in window && Notification.permission === 'granted') new Notification(title, { body: body, tag: 'cnx-' + title }); } catch (e) {}
+}
+C.enableAlerts = function () {
+  ensureAudio();
+  if (!('Notification' in window)) { alert('This browser does not support notifications. In-app banners and sound still work while the app is open.'); return; }
+  Notification.requestPermission().then(function (p) { $('alertsBtn').textContent = p === 'granted' ? 'Notifications on' : 'Blocked in browser settings'; });
+};
+C.downloadAlarms = function () {
+  if (hm(SET.sched.start) == null) { alert('Set your shift start time first.'); return; }
+  var lead = SET.remind * MS, t0 = Date.now(), rows = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//CNX Shift Tracker//EN'], n = 0;
+  function z(ms) { return new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); }
+  function ev(uid, title, at) {
+    if (at < t0) return; n++;
+    rows.push('BEGIN:VEVENT', 'UID:cnx-' + uid + '@shift-tracker', 'DTSTAMP:' + z(t0), 'DTSTART:' + z(at), 'DTEND:' + z(at + 60000), 'SUMMARY:' + title, 'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + title, 'TRIGGER:PT0S', 'END:VALARM', 'END:VEVENT');
+  }
+  for (var i = 0; i < 14; i++) {
+    var d = new Date(); d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + i);
+    if (!dayInfo(d).work) continue;
+    var S = schedStartMs(d), tl = timeline(S), k = isoDay(d); if (!tl) continue;
+    ev(k + 'start', 'Shift starts - open the app', S);
+    tl.phases.forEach(function (p) { var nm = p.kind === 'lunch' ? 'Lunch' : 'Break'; ev(k + p.id + 's', nm + ' starts now', p.s); ev(k + p.id + 'e', nm + ' ends in ' + SET.remind + ' min - head back', p.e - lead); });
+    ev(k + 'end', 'Shift ends in ' + SET.remind + ' min', tl.end - lead);
+  }
+  if (!n) { alert('No upcoming working days found. Check your days off.'); return; }
+  rows.push('END:VCALENDAR'); download('cnx_shift_alarms.ics', rows.join('\r\n'), 'text/calendar');
+};
 
-    // ---------- Alerts ----------
-    function ensureAudio() {
-        try { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch (e) {}
-    }
-    function beep() {
-        if (!audioCtx) return;
-        try {
-            [0, 0.35, 0.7].forEach(off => {
-                const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-                o.frequency.value = 880; o.connect(g); g.connect(audioCtx.destination);
-                const t = audioCtx.currentTime + off;
-                g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
-                o.start(t); o.stop(t + 0.3);
-            });
-        } catch (e) {}
-    }
-    function notify(title, body) {
-        const host = $('toastHost');
-        const el = document.createElement('div');
-        el.className = 'pointer-events-auto w-full max-w-md bg-gray-900 border border-amber-500/60 rounded-2xl px-4 py-3 shadow-2xl flex items-start gap-3';
-        el.innerHTML = '<i class="ph-bold ph-bell-ringing text-amber-400 text-xl mt-0.5"></i><div class="flex-1"><div class="font-bold text-sm text-white">' + esc(title) + '</div><div class="text-xs text-gray-300 mt-0.5">' + esc(body) + '</div></div><button class="text-gray-400 hover:text-white cursor-pointer"><i class="ph-bold ph-x"></i></button>';
-        el.querySelector('button').onclick = () => el.remove();
-        host.appendChild(el);
-        setTimeout(() => el.remove(), 60000);
-        try { if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]); } catch (e) {}
-        beep();
-        try { if ('Notification' in window && Notification.permission === 'granted') new Notification(title, { body: body, tag: 'cnx-' + title }); } catch (e) {}
-    }
-    window.enableAlerts = function () {
-        ensureAudio();
-        if (!('Notification' in window)) { alert('This browser does not support notifications. In-app banners and sound will still work while the app is open.'); return; }
-        Notification.requestPermission().then(p => { $('alertsBtn').textContent = p === 'granted' ? 'Notifications on' : 'Notifications blocked in browser settings'; });
-    };
+/* ================= data ================= */
+function download(name, text, type) {
+  var url = URL.createObjectURL(new Blob([text], { type: type })), a = document.createElement('a'); a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+}
+function snapshot() { return JSON.stringify({ app: 'cnx-shift-tracker', version: APP_VERSION, exportedAt: new Date().toISOString(), settings: SET, data: D, presets: presetList() }); }
+function restore(txt) {
+  var j = JSON.parse(txt);
+  if (j.app === 'cnx-shift-tracker' && j.data) {
+    mergeSet(j.settings); mergeData(j.data); if (Array.isArray(j.presets)) store('cnx3_presets', j.presets);
+  } else if (j.app === 'cnx-shift-visualizer' && j.data) {
+    D.records = []; D.live = null; D.over = {}; migrateData(j.data); migrateSettings(j.data.settings);
+  } else throw new Error('bad');
+  saveSet(); save(); recalc(); writeSettings(); renderRot(); renderAll();
+}
+C.exportBackup = function () { download('cnx_backup_' + isoDay(new Date()) + '.json', snapshot(), 'application/json'); };
+C.importFile = function (input) {
+  var f = input.files && input.files[0]; if (!f) return; var r = new FileReader();
+  r.onload = function () { try { if (!confirm('Replace the data on this device with this backup?')) return; restore(r.result); alert('Backup restored.'); } catch (e) { alert('That file is not a valid backup.'); } input.value = ''; };
+  r.readAsText(f);
+};
+C.openTransfer = function () {
+  openSheet('<div class="sheethead"><h3>Transfer to another device</h3><button class="x" onclick="CNX.closeSheet()">' + ic('x') + '</button></div>' +
+    '<p class="hint" style="margin-bottom:8px">On this device: tap Copy and send the text to yourself. On the other device: open this screen, paste the text over the box and tap Import.</p>' +
+    '<textarea id="xferText" spellcheck="false">' + esc(snapshot()) + '</textarea><div class="two" style="margin-top:10px"><button class="btn" onclick="CNX.copyXfer()">Copy</button><button class="btn primary" onclick="CNX.importXfer()">Import</button></div>');
+};
+C.copyXfer = function () { var t = $('xferText'); t.select(); try { if (navigator.clipboard) navigator.clipboard.writeText(t.value); else document.execCommand('copy'); alert('Copied.'); } catch (e) {} };
+C.importXfer = function () { try { if (!confirm('Replace the data on this device with the pasted data?')) return; restore($('xferText').value); C.closeSheet(); alert('Imported.'); } catch (e) { alert('That text is not valid app data.'); } };
+C.exportCSV = function () {
+  function q(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
+  var csv = '﻿Date,Start,End,Paid hours,Net EGP,Gross EGP,Multiplier,Auto\n';
+  D.records.forEach(function (r) { csv += [q(r.iso), q(r.start ? tm(r.start) : ''), q(r.end ? tm(r.end) : ''), (r.secs / 3600).toFixed(2), net(r.gross).toFixed(2), (+r.gross).toFixed(2), r.mult || '', r.auto ? 'yes' : ''].join(',') + '\n'; });
+  download('cnx_shift_history.csv', csv, 'text/csv;charset=utf-8');
+};
+C.clearAll = function () {
+  if (!confirm('Erase ALL recorded shifts on this device? Settings are kept.')) return;
+  D.records = []; D.live = null; D.over = {}; save(); renderAll();
+};
 
-    window.downloadReminders = function () {
-        const tl = timeline(S.isClockedIn && S.shiftStart ? S.shiftStart : now());
-        if (!tl) { alert('Set your shift start time first.'); return; }
-        const lead = SET.remind * 60000, z = ms => new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-        const rows = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//CNX Shift Visualizer//EN'];
-        let i = 0;
-        const add = (title, t) => {
-            rows.push('BEGIN:VEVENT', 'UID:cnx-' + tl.start + '-' + (i++) + '@shift-visualizer', 'DTSTAMP:' + z(Date.now()),
-                'DTSTART:' + z(t), 'DTEND:' + z(t + 60000), 'SUMMARY:' + title,
-                'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + title, 'TRIGGER:PT0S', 'END:VALARM', 'END:VEVENT');
-        };
-        add('Shift starts', tl.start);
-        tl.events.forEach(e => {
-            const name = e.kind === 'lunch' ? 'Lunch' : 'Break';
-            if (e.id === 'end') add('Shift ends in ' + SET.remind + ' min', e.t - lead);
-            else if (e.isStart) add(name + ' starts now', e.t);
-            else add(name + ' ends in ' + SET.remind + ' min - head back', e.t - lead);
-        });
-        rows.push('END:VCALENDAR');
-        const url = URL.createObjectURL(new Blob([rows.join('\r\n')], { type: 'text/calendar' }));
-        const a = document.createElement('a'); a.href = url; a.download = 'cnx_shift_alarms.ics';
-        document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-    };
+/* ================= nav / version ================= */
+C.tab = function (n) {
+  ['live', 'cal', 'set'].forEach(function (x) { $('tab-' + x).classList.toggle('on', x === n); $('nav-' + x).classList.toggle('on', x === n); });
+  try { localStorage.setItem('cnx3_tab', n); } catch (e) {}
+  window.scrollTo(0, 0); if (n === 'cal') renderCal();
+};
+C.month = function (d) { viewDate = d === 0 ? new Date(new Date().getFullYear(), new Date().getMonth(), 1) : new Date(viewDate.getFullYear(), viewDate.getMonth() + d, 1); renderCal(); };
+C.dismissNew = function () { D.lastSeen = APP_VERSION; save(); renderLive(); };
+C.showChangelog = function () {
+  D.lastSeen = APP_VERSION; save(); renderLive();
+  openSheet('<div class="sheethead"><h3>What\'s new</h3><button class="x" onclick="CNX.closeSheet()">' + ic('x') + '</button></div>' + changelogHTML());
+};
+function changelogHTML() {
+  return CHANGELOG.map(function (c) { return '<h2 class="t" style="margin:12px 0 4px">v' + c.v + ' · ' + c.d + '</h2><ul style="margin:0;padding-left:18px;color:#d1d5db;font-size:13px">' + c.items.map(function (i) { return '<li>' + esc(i) + '</li>'; }).join('') + '</ul>'; }).join('');
+}
 
-    // ---------- Persistence & cloud ----------
-    function settingsPayload() { return JSON.parse(JSON.stringify(SET)); }
-    function statePayload() {
-        return {
-            schema: 3, isClockedIn: S.isClockedIn, isOnLunch: S.isOnLunch, isOnShortBreak: S.isOnShortBreak,
-            runStart: S.runStart, accSecs: S.accSecs, accEarn: S.accEarn, shiftStart: S.shiftStart,
-            phaseEnd: S.phaseEnd, fired: S.fired, shiftHistory: S.history, settings: settingsPayload(), lastUpdated: S.lastUpdated
-        };
-    }
-    function mergeSettings(src) {
-        if (!src) return;
-        const sched = Object.assign({}, DEFAULT_SET.sched, SET.sched, src.sched || {});
-        Object.keys(DEFAULT_SET).forEach(k => { if (k !== 'sched' && src[k] !== undefined) SET[k] = src[k]; });
-        SET.sched = sched;
-    }
-    function applyState(d) {
-        S.isClockedIn = !!d.isClockedIn; S.isOnLunch = !!d.isOnLunch; S.isOnShortBreak = !!d.isOnShortBreak;
-        S.runStart = d.runStart || null; S.accSecs = d.accSecs || 0; S.accEarn = d.accEarn || 0;
-        S.shiftStart = d.shiftStart || null; S.phaseEnd = d.phaseEnd || null;
-        S.fired = Array.isArray(d.fired) ? d.fired : (d.fired ? Object.values(d.fired) : []);
-        S.history = Array.isArray(d.shiftHistory) ? d.shiftHistory : (d.shiftHistory ? Object.values(d.shiftHistory) : []);
-        S.lastUpdated = d.lastUpdated || 0;
-        if (S.isClockedIn && !S.isOnLunch && !S.runStart) S.runStart = now();
-        if (!S.isClockedIn) { S.runStart = null; S.accSecs = 0; S.accEarn = 0; S.phaseEnd = null; S.fired = []; }
-    }
-    function save() {
-        S.lastUpdated = now();
-        const payload = statePayload();
-        store('cnx_state', payload);
-        if (dbRoot && syncKey) {
-            dbRoot.child(syncKey).set(payload)
-                .then(() => { cloud.lastOk = Date.now(); cloud.err = ''; renderCloud(); })
-                .catch(e => { cloud.err = (e && e.code) || 'write failed'; renderCloud(); });
-        }
-    }
-    function queueSave() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 500); }
-
-    function renderCloud() {
-        const dot = $('syncStatusDot'), st = $('modalCloudStatus'), hint = $('syncHint');
-        const ok = cloud.connected && cloud.lastOk && !cloud.err;
-        dot.className = 'inline-flex rounded-full h-2 w-2 ' + (cloud.err ? 'bg-red-500' : ok ? 'bg-emerald-500' : 'bg-amber-500');
-        st.textContent = cloud.err ? 'Error: ' + cloud.err : ok ? 'Synced at ' + new Date(cloud.lastOk).toLocaleTimeString() : cloud.connected ? 'Connected, waiting for first sync' : 'Offline (saving on this device only)';
-        st.className = 'font-bold text-right ' + (cloud.err ? 'text-red-400' : ok ? 'text-emerald-400' : 'text-gray-400');
-        if (/PERMISSION/i.test(cloud.err)) { hint.textContent = 'The Firebase database rules are rejecting this app. Sync cannot work until the rules allow read/write on sync_rooms (test-mode rules expire after 30 days).'; hint.classList.remove('hidden'); }
-        else if (!cloud.connected) { hint.textContent = 'Cannot reach the database. Check the internet connection, and that the Firebase Realtime Database in the code still exists.'; hint.classList.remove('hidden'); }
-        else hint.classList.add('hidden');
-    }
-
-    function genKey() {
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', arr = new Uint32Array(8);
-        window.crypto.getRandomValues(arr);
-        return 'CNX-' + Array.from(arr, n => chars[n % chars.length]).join('');
-    }
-
-    function initCloud() {
-        try {
-            if (!firebase.apps.length) firebase.initializeApp({ databaseURL: "https://cnx-alex-tracker-default-rtdb.firebaseio.com" });
-            const db = firebase.database();
-            dbRoot = db.ref('sync_rooms');
-            db.ref('.info/serverTimeOffset').on('value', s => { serverOffset = s.val() || 0; });
-            db.ref('.info/connected').on('value', s => { cloud.connected = !!s.val(); renderCloud(); });
-        } catch (e) { console.warn('Firebase unavailable:', e); cloud.err = 'Firebase failed to load'; }
-        renderCloud();
-        attachListener();
-    }
-    function attachListener() {
-        $('syncBadgeText').textContent = 'Key: ' + syncKey;
-        $('modalActiveKeyDisplay').textContent = syncKey;
-        if (!dbRoot) return;
-        if (dbRefCurrent && dbListener) dbRefCurrent.off('value', dbListener);
-        dbRefCurrent = dbRoot.child(syncKey);
-        dbListener = snap => {
-            const d = snap.val();
-            cloud.lastOk = Date.now(); cloud.err = ''; renderCloud();
-            if (!d || !d.lastUpdated) { save(); return; }                       // new key: publish this device's data
-            if (d.lastUpdated < S.lastUpdated) { save(); return; }              // this device is newer
-            if (d.lastUpdated === S.lastUpdated) return;                        // our own echo
-            applyState(d); mergeSettings(d.settings); writeInputs(); recalculateRates(false);
-            store('cnx_state', statePayload()); store('cnx_settings', SET);
-            refreshAll();
-        };
-        dbRefCurrent.on('value', dbListener, e => { cloud.err = (e && e.code) || 'read failed'; renderCloud(); });
-    }
-
-    // ---------- Actions ----------
-    window.toggleClock = function () {
-        ensureAudio();
-        if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
-        if (!S.isClockedIn) {
-            S.isClockedIn = true; S.isOnLunch = false; S.isOnShortBreak = false;
-            S.accSecs = 0; S.accEarn = 0; S.fired = []; S.phaseEnd = null;
-            S.shiftStart = now(); S.runStart = S.shiftStart;
-            lastRemind = null; lastEndRemind = null;
-            save(); refreshAll(); logicTick();
-        } else {
-            clockOutAt(now()); save(); refreshAll();
-        }
-    };
-    window.toggleLunch = function () {
-        if (!S.isClockedIn) return;
-        ensureAudio();
-        S.isOnLunch ? endPhaseAt(now(), now(), false) : startLunchAt(now());
-        save(); refreshAll();
-    };
-    window.toggleShortBreak = function () {
-        if (!S.isClockedIn || S.isOnLunch) return;
-        ensureAudio();
-        S.isOnShortBreak ? endPhaseAt(now(), now(), false) : startBreakAt(now());
-        save(); refreshAll();
-    };
-    window.resetShift = function () {
-        if (S.isClockedIn && !confirm('Discard the current shift without saving it?')) return;
-        S.isClockedIn = false; S.isOnLunch = false; S.isOnShortBreak = false;
-        S.runStart = null; S.accSecs = 0; S.accEarn = 0; S.shiftStart = null; S.phaseEnd = null; S.fired = [];
-        save(); refreshAll();
-    };
-    window.deleteShift = function (id) {
-        if (!confirm('Delete this shift from the log?')) return;
-        S.history = S.history.filter(s => s.id !== id);
-        save(); renderHistory(); renderCalendar();
-    };
-    window.clearHistory = function () {
-        if (!confirm('Clear all logged shifts on all synced devices?')) return;
-        S.history = []; save(); renderHistory(); renderCalendar();
-    };
-
-    // ---------- Settings ----------
-    function monthlyBase() { return SET.packageChoice === 'custom' ? (SET.customPackage || 0) : (parseFloat(SET.packageChoice) || 15625); }
-
-    function writeInputs() {
-        $('packageSelect').value = SET.packageChoice;
-        $('customPackageInput').value = SET.customPackage || '';
-        $('kpiSlider').value = SET.kpi;
-        $('nightAllowanceInput').value = SET.night;
-        $('nightStartInput').value = SET.nightStart;
-        $('nightEndInput').value = SET.nightEnd;
-        $('taxInput').value = SET.tax;
-        $('remindInput').value = SET.remind;
-        $('schedEnabled').checked = !!SET.sched.enabled;
-        $('schedStart').value = SET.sched.start || '';
-        $('schedB1').value = SET.sched.b1 || '';
-        $('schedLunch').value = SET.sched.lunch || '';
-        $('schedB2').value = SET.sched.b2 || '';
-        applyProbationUI();
-    }
-    function readInputs() {
-        const num = (id, d, lo, hi) => { const v = parseFloat($(id).value); return isNaN(v) ? d : Math.min(hi, Math.max(lo, v)); };
-        SET.packageChoice = $('packageSelect').value;
-        SET.customPackage = num('customPackageInput', 0, 0, 1000000);
-        SET.kpi = SET.probation ? 0 : num('kpiSlider', 0, 0, 100);
-        SET.night = num('nightAllowanceInput', 6.85, 0, 1000);
-        SET.nightStart = Math.round(num('nightStartInput', 18, 0, 23));
-        SET.nightEnd = Math.round(num('nightEndInput', 6, 0, 23));
-        SET.tax = num('taxInput', 15, 0, 60);
-        SET.remind = Math.round(num('remindInput', 7, 1, 30));
-        SET.sched = { enabled: $('schedEnabled').checked, start: $('schedStart').value, b1: $('schedB1').value, lunch: $('schedLunch').value, b2: $('schedB2').value };
-    }
-
-    window.recalculateRates = function (persist) {
-        if (persist !== false) readInputs();
-        $('customPackageInput').classList.toggle('hidden', SET.packageChoice !== 'custom');
-        $('kpiValueText').textContent = SET.kpi + '%';
-        $('taxLabel').textContent = SET.tax;
-        const monthly = monthlyBase() + (SET.probation ? 0 : KPI_BONUS_MAX * SET.kpi / 100);
-        baseHourly = monthly / WORK_DAYS / SHIFT_PAID_HOURS;
-        $('ratePerHour').textContent = baseHourly.toFixed(2) + ' gross/h';
-        $('ratePerMinute').textContent = net(baseHourly / 60).toFixed(2) + ' EGP/m';
-        $('rateNight').textContent = (baseHourly + SET.night).toFixed(2) + ' gross/h';
-        $('nightBadgeText').textContent = 'Night allowance +' + SET.night.toFixed(2) + '/h active (' + pad(SET.nightStart) + ':00-' + pad(SET.nightEnd) + ':00)';
-        $('shiftGoalLabel').textContent = SET.sched.enabled ? 'Scheduled shift (est. net, night hours included):' : 'Full shift (est. net):';
-        $('shiftGoalText').textContent = net(projectedGross()).toFixed(2) + ' EGP';
-        if (persist !== false) { store('cnx_settings', SET); queueSave(); }
-        updateDisplay(); updateNextEvent(); renderHistory(); renderCalendar();
-    };
-
-    window.toggleProbationMode = function () { SET.probation = !SET.probation; applyProbationUI(); recalculateRates(); };
-    function applyProbationUI() {
-        const btn = $('probationToggleBtn'), slider = $('kpiSlider');
-        const base = 'px-3.5 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ';
-        if (SET.probation) {
-            btn.className = base + 'bg-emerald-950 border border-emerald-700 text-emerald-300';
-            $('probationStatusText').textContent = 'Probation (KPI off)';
-            slider.disabled = true; slider.classList.add('opacity-50', 'cursor-not-allowed');
-        } else {
-            btn.className = base + 'bg-cyan-950 border border-cyan-700 text-cyan-300';
-            $('probationStatusText').textContent = 'Post-Probation (KPI on)';
-            slider.disabled = false; slider.classList.remove('opacity-50', 'cursor-not-allowed');
-        }
-    }
-
-    // ---------- Display ----------
-    function updateDisplay() {
-        const t = totals();
-        $('liveCounter').textContent = net(t.earn).toFixed(4);
-        $('grossDisplay').textContent = t.earn.toFixed(2) + ' EGP';
-        $('workedTimeDisplay').textContent = fmt(t.secs);
-        $('shiftProgressBar').style.width = Math.min(100, t.secs / (SHIFT_PAID_HOURS * 3600) * 100) + '%';
-        const night = S.isClockedIn && !S.isOnLunch && isNightHour(new Date().getHours());
-        const nb = $('nightStatusBadge'); nb.classList.toggle('hidden', !night); nb.classList.toggle('flex', night);
-        updateBadge();
-    }
-    function updateBadge() {
-        const badge = $('shiftStatusBadge'), on = S.isClockedIn;
-        let txt = 'Clocked Out';
-        if (on) {
-            txt = 'Clocked In';
-            if ((S.isOnLunch || S.isOnShortBreak) && S.phaseEnd) {
-                const left = Math.max(0, Math.ceil((S.phaseEnd - now()) / 1000));
-                txt = (S.isOnLunch ? 'Lunch (unpaid) ' : 'Break (paid) ') + pad(Math.floor(left / 60)) + ':' + pad(left % 60) + ' left';
-            }
-        }
-        if (badge.textContent !== txt) badge.textContent = txt;
-        badge.className = 'text-xs font-semibold px-3 py-1 rounded-full border ' + (on ? 'bg-emerald-950 text-emerald-400 border-emerald-800' : 'bg-gray-800 text-gray-400 border-gray-700');
-    }
-    function updateUI() {
-        const clockBtn = $('clockBtn'), lunch = $('breakBtn'), brk = $('shortBreakBtn'), on = S.isClockedIn;
-        clockBtn.className = 'flex-1 min-w-[140px] py-3.5 px-5 rounded-2xl text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer ' +
-            (on ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20');
-        clockBtn.innerHTML = on ? '<i class="ph-bold ph-stop"></i><span>Clock Out</span>' : '<i class="ph-bold ph-play"></i><span>Clock In Shift</span>';
-        lunch.disabled = !on; brk.disabled = !on || S.isOnLunch;
-        [lunch, brk].forEach(b => { b.classList.toggle('opacity-50', b.disabled); b.classList.toggle('cursor-not-allowed', b.disabled); });
-        $('breakBtnLabel').textContent = S.isOnLunch ? 'Resume Work' : 'Take Lunch (45m, unpaid)';
-        $('shortBreakLabel').textContent = S.isOnShortBreak ? 'Back from Break' : 'Break (15m, paid)';
-        $('pulseDot').classList.toggle('hidden', !(on && !S.isOnLunch));
-    }
-    function refreshAll() { updateUI(); updateDisplay(); updateNextEvent(); renderHistory(); renderCalendar(); $('shiftGoalText').textContent = net(projectedGross()).toFixed(2) + ' EGP'; }
-
-    function renderHistory() {
-        const list = $('historyList');
-        if (!S.history.length) { list.innerHTML = '<div class="text-xs text-gray-500 text-center py-4">No logged shifts yet.</div>'; return; }
-        list.innerHTML = S.history.map(s =>
-            '<div class="flex items-center justify-between p-3 rounded-2xl bg-gray-950 border border-gray-800 text-xs">' +
-              '<div class="flex items-center gap-3"><div class="w-8 h-8 rounded-xl bg-emerald-950 text-emerald-400 flex items-center justify-center"><i class="ph-bold ph-check"></i></div>' +
-              '<div><div class="font-bold text-white">' + esc(s.date) + ' <span class="text-gray-500 font-normal">(' + esc(s.time) + ')</span></div><div class="text-[11px] text-gray-400">Duration: ' + esc(s.duration) + '</div></div></div>' +
-              '<div class="flex items-center gap-3"><div class="text-right"><div class="font-bold font-mono text-emerald-400">+' + esc(s.net) + ' EGP net</div><div class="text-[10px] text-gray-500 font-mono">Gross ' + esc(s.gross) + '</div></div>' +
-              '<button onclick="deleteShift(' + (Number(s.id) || 0) + ')" title="Delete" class="text-gray-600 hover:text-red-400 cursor-pointer"><i class="ph-bold ph-trash"></i></button></div></div>').join('');
-    }
-
-    function renderCalendar() {
-        const grid = $('calendarDaysGrid'), y = viewDate.getFullYear(), m = viewDate.getMonth();
-        $('calendarMonthLabel').textContent = MONTHS[m] + ' ' + y;
-        const byDay = {};
-        S.history.forEach(s => { const k = s.iso || s.date; const o = byDay[k] || (byDay[k] = { g: 0, n: 0 }); o.g += parseFloat(s.gross) || 0; o.n += parseFloat(s.net) || 0; });
-        let start = new Date(y, m, 1).getDay() - 1; if (start < 0) start = 6;
-        const dim = new Date(y, m + 1, 0).getDate();
-        let html = '', g = 0, n = 0, worked = 0;
-        for (let i = 0; i < start; i++) html += '<div class="h-14 rounded-xl bg-gray-950/40 border border-gray-900"></div>';
-        for (let day = 1; day <= dim; day++) {
-            const d = new Date(y, m, day), a = byDay[isoDay(d)] || { g: 0, n: 0 }, b = byDay[legacyDay(d)] || { g: 0, n: 0 };
-            const en = a.n + b.n, eg = a.g + b.g;
-            if (eg > 0) { worked++; g += eg; n += en; }
-            html += '<div class="h-14 rounded-xl p-1.5 flex flex-col justify-between border ' + (eg > 0 ? 'border-emerald-800 bg-emerald-950/30' : 'border-gray-800 bg-gray-950/80') + '">' +
-                '<div class="flex justify-between items-center text-[10px]"><span class="font-bold text-gray-400">' + day + '</span>' + (eg > 0 ? '<i class="ph-bold ph-check-circle text-emerald-400"></i>' : '') + '</div>' +
-                '<div class="text-right">' + (eg > 0 ? '<div class="font-mono font-bold text-emerald-400 text-[10px]">' + en.toFixed(0) + '</div><div class="text-[8px] text-gray-500">net</div>' : '<div class="text-[9px] text-gray-700 italic">Off</div>') + '</div></div>';
-        }
-        grid.innerHTML = html;
-        $('calStatShifts').textContent = worked;
-        $('calStatNet').textContent = n.toFixed(2);
-        $('calStatGross').textContent = g.toFixed(2);
-    }
-    window.changeMonth = function (delta) { viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + delta, 1); renderCalendar(); };
-
-    // ---------- Export / backup ----------
-    function download(name, text, type) {
-        const url = URL.createObjectURL(new Blob([text], { type: type }));
-        const a = document.createElement('a'); a.href = url; a.download = name;
-        document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }
-    window.exportCSV = function () {
-        const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-        let csv = '\uFEFFDate,Start Time,Duration,Net EGP,Gross EGP\n';
-        S.history.forEach(s => { csv += [q(s.iso || s.date), q(s.time), q(s.duration), s.net, s.gross].join(',') + '\n'; });
-        download('cnx_shift_history.csv', csv, 'text/csv;charset=utf-8');
-    };
-    window.exportBackup = function () {
-        download('cnx_backup_' + isoDay(new Date()) + '.json', JSON.stringify({ app: 'cnx-shift-visualizer', exportedAt: new Date().toISOString(), data: statePayload() }, null, 2), 'application/json');
-    };
-    window.importBackup = function (input) {
-        const f = input.files && input.files[0]; if (!f) return;
-        const r = new FileReader();
-        r.onload = () => {
-            try {
-                const j = JSON.parse(r.result);
-                if (j.app !== 'cnx-shift-visualizer' || !j.data) throw new Error('bad file');
-                if (!confirm('Replace the data on this device (and synced devices) with this backup?')) return;
-                applyState(j.data); mergeSettings(j.data.settings); writeInputs(); recalculateRates(false);
-                store('cnx_settings', SET); save(); refreshAll();
-                alert('Backup restored.');
-            } catch (e) { alert('That file is not a valid backup.'); }
-            input.value = '';
-        };
-        r.readAsText(f);
-    };
-
-    // ---------- Navigation & modals ----------
-    window.switchTab = function (name) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-        document.querySelectorAll('.tab-btn').forEach(el => { el.classList.remove('tab-active'); el.classList.add('text-gray-400'); });
-        $('tab-content-' + name).classList.remove('hidden');
-        const b = $('tab-btn-' + name); b.classList.add('tab-active'); b.classList.remove('text-gray-400');
-        if (name === 'calendar') renderCalendar();
-        if (name === 'settings') renderHistory();
-    };
-    const modal = (id, show) => { const el = $(id); el.classList.toggle('hidden', !show); el.classList.toggle('flex', show); };
-    window.openSyncModal = () => { renderCloud(); modal('syncModal', true); };
-    window.closeSyncModal = () => modal('syncModal', false);
-
-    window.applySyncKey = function () {
-        const v = $('syncKeyInputField').value.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
-        if (v.length < 12) { alert('That does not look like a full Sync Key (example: CNX-AB12CD34).'); return; }
-        syncKey = v; store('cnx_sync_key', v); attachListener(); closeSyncModal();
-    };
-    window.copySyncKey = function () {
-        if (navigator.clipboard) navigator.clipboard.writeText(syncKey).then(() => alert('Sync Key copied: ' + syncKey)); else prompt('Copy your Sync Key:', syncKey);
-    };
-    window.copyPairLink = function () {
-        const link = location.href.split('#')[0] + '#key=' + syncKey;
-        if (navigator.clipboard) navigator.clipboard.writeText(link).then(() => alert('Pairing link copied. Open it on your other device.')); else prompt('Copy this link:', link);
-    };
-    window.testSync = function () { cloud.err = ''; cloud.lastOk = 0; renderCloud(); save(); };
-    window.generateNewKey = function () {
-        if (!confirm('Create a new key? Your other devices must switch to it to stay in sync.')) return;
-        syncKey = genKey(); store('cnx_sync_key', syncKey); attachListener(); save();
-    };
-
-    // ---------- Init ----------
-    document.addEventListener('DOMContentLoaded', function () {
-        mergeSettings(safeJSON('cnx_settings'));
-        writeInputs();
-        recalculateRates(false);
-
-        const local = safeJSON('cnx_state');
-        if (local) { applyState(local); if (!safeJSON('cnx_settings') && local.settings) { mergeSettings(local.settings); writeInputs(); recalculateRates(false); } }
-
-        syncKey = localStorage.getItem('cnx_sync_key');
-        const m = /key=([A-Za-z0-9-]+)/.exec(location.hash);
-        if (m) { syncKey = m[1].toUpperCase(); store('cnx_sync_key', syncKey); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
-        if (!syncKey || syncKey === 'CNX-ALEX-7788') { syncKey = genKey(); store('cnx_sync_key', syncKey); }
-
-        if ('Notification' in window && Notification.permission === 'granted') $('alertsBtn').textContent = 'Notifications on';
-
-        refreshAll();
-        logicTick();
-        setInterval(() => {
-            if (S.isClockedIn && S.runStart) updateDisplay(); else if (S.isClockedIn) updateBadge();
-            const t = Date.now();
-            if (t - lastLogic > 1000) { lastLogic = t; logicTick(); updateNextEvent(); }
-        }, 100);
-        document.addEventListener('visibilitychange', () => { if (!document.hidden) { logicTick(); updateDisplay(); } });
-        window.addEventListener('focus', () => logicTick());
-        initCloud();
-    });
+/* ================= init ================= */
+function init() {
+  Array.prototype.forEach.call(document.querySelectorAll('[data-ic]'), function (el) { el.outerHTML = ic(el.getAttribute('data-ic')); });
+  load(); recalc();
+  $('verBtn').textContent = 'v' + APP_VERSION; $('aboutVer').textContent = 'Version ' + APP_VERSION; $('changelog').innerHTML = changelogHTML();
+  writeSettings(); renderRot();
+  if ('Notification' in window && Notification.permission === 'granted') $('alertsBtn').textContent = 'Notifications on';
+  document.addEventListener('click', ensureAudio, { once: true });
+  var tab = 'live'; try { tab = localStorage.getItem('cnx3_tab') || 'live'; } catch (e) {} if (['live', 'cal', 'set'].indexOf(tab) < 0) tab = 'live';
+  logic(Date.now(), true); renderAll(); C.tab(tab);
+  setInterval(function () {
+    var t = Date.now(); paint(t);
+    if (t - lastSlow >= 1000) { lastSlow = t; logic(t, false); if (D.live || $('nextEventText').textContent === '') $('nextEventText').textContent = nextText(t); }
+  }, 250);
+  function wake() { if (!document.hidden) { logic(Date.now(), true); renderAll(); } }
+  document.addEventListener('visibilitychange', wake); window.addEventListener('focus', wake); window.addEventListener('pageshow', wake);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
 </script>
 </body>
