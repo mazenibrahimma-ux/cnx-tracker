@@ -115,6 +115,8 @@ nav.tabs svg{width:22px;height:22px}
 .toast b{display:block;font-size:14px}.toast span{font-size:12.5px;color:#d1d5db}
 textarea{min-height:150px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
 .empty{color:var(--dim);text-align:center;padding:14px 0;font-size:12.5px}
+.pill{border:1px solid var(--line);background:var(--card2);color:var(--mut);padding:8px 13px;border-radius:99px;font-size:12px;font-weight:700}
+.pill.on{background:#06303a;border-color:#155e75;color:#67e8f9}
 </style>
 </head>
 <body>
@@ -165,9 +167,10 @@ textarea{min-height:150px;font-family:ui-monospace,Menlo,monospace;font-size:12p
     </div>
 
     <div class="card">
-      <div class="row between"><h2 class="t">This month so far</h2><span id="monthDays" class="sub"></span></div>
+      <div class="row between"><h2 class="t" id="monthTitle">This pay period</h2><span id="monthDays" class="sub"></span></div>
       <div class="big" style="margin:6px 0 0"><span id="monthNet" class="mono" style="font-size:28px;font-weight:800;color:#67e8f9">0.00</span><span class="cur" style="font-size:14px;color:#67e8f9">EGP net</span></div>
-      <div class="sub">Gross <span id="monthGross" class="mono">0.00</span> · compare with your payslip at month end</div>
+      <div class="sub">Gross <span id="monthGross" class="mono">0.00</span> · compare with your payslip</div>
+      <div class="kv"><span id="expLabel">Expected by end of period</span><b id="monthExp" class="mono">-</b></div>
     </div>
   </section>
 
@@ -188,6 +191,19 @@ textarea{min-height:150px;font-family:ui-monospace,Menlo,monospace;font-size:12p
       <div class="cal" id="calGrid" style="margin-top:5px"></div>
       <div class="legend"><span><b style="color:#34d399">Green</b> worked (net)</span><span>Hatched = day off</span><span><b style="color:#fbbf24">★</b> public holiday</span><span>Dashed = tracked day with no record</span></div>
       <p class="hint">Tap any day to add or edit a shift, mark it off, or mark a holiday.</p>
+    </div>
+    <div class="card">
+      <h2 class="t" style="margin-bottom:8px">Earnings</h2>
+      <div class="row wrap" style="margin-bottom:10px" id="earnChips">
+        <button class="pill" data-p="cur" onclick="CNX.earnPreset('cur')">This pay month</button>
+        <button class="pill" data-p="prev" onclick="CNX.earnPreset('prev')">Last pay month</button>
+        <button class="pill" data-p="all" onclick="CNX.earnPreset('all')">All time</button>
+      </div>
+      <div class="grid2">
+        <div class="field" style="margin:0"><label for="earnFrom">From</label><input type="date" id="earnFrom" onchange="CNX.earnCustom()"></div>
+        <div class="field" style="margin:0"><label for="earnTo">To</label><input type="date" id="earnTo" onchange="CNX.earnCustom()"></div>
+      </div>
+      <div id="earnOut"></div>
     </div>
     <div class="card">
       <h2 class="t" style="margin-bottom:10px">Shifts this month</h2>
@@ -226,19 +242,24 @@ textarea{min-height:150px;font-family:ui-monospace,Menlo,monospace;font-size:12p
         <div class="field"><label for="nightAllow">Night allowance (EGP/h)</label><input type="number" id="nightAllow" min="0" step="0.05" inputmode="decimal" onchange="CNX.readSettings()"></div>
         <div class="field"><label>Night hours (from → to)</label><div class="grid2"><input type="number" id="nightStart" min="0" max="23" inputmode="numeric" onchange="CNX.readSettings()"><input type="number" id="nightEnd" min="0" max="23" inputmode="numeric" onchange="CNX.readSettings()"></div></div>
       </div>
+      <div class="field"><label for="cutoffIn">Pay month starts on day</label><input type="number" id="cutoffIn" min="1" max="28" inputmode="numeric" onchange="CNX.readSettings()"><p class="hint">1 = calendar month. If your payroll runs from the 21st to the 20th, enter 21.</p></div>
       <p class="hint">The holiday multiplier applies to the base hourly rate. The night allowance is added on top, unmultiplied.</p>
     </details>
 
     <details class="card" id="secSlip">
-      <summary><div>Calibrate from your payslip<small>Replace guesses with real numbers</small></div></summary>
+      <summary><div>Payslips<small>Make the estimates match your real pay</small></div></summary>
+      <p class="hint" style="margin:0 0 10px">Enter each payslip you receive. The app learns your real deductions, and for months you tracked fully it learns how far its estimate was from your real pay. It uses that to adjust "expected" earnings.</p>
+      <div class="field"><label for="calPeriod">Pay month this payslip is for</label><input type="month" id="calPeriod"></div>
       <div class="grid2">
-        <div class="field"><label for="calBase">Base package (EGP)</label><input type="number" id="calBase" inputmode="decimal"></div>
-        <div class="field"><label for="calKpi">KPI bonus paid (EGP)</label><input type="number" id="calKpi" inputmode="decimal"></div>
         <div class="field"><label for="calGross">Total gross (EGP)</label><input type="number" id="calGross" inputmode="decimal"></div>
         <div class="field"><label for="calNet">Net take-home (EGP)</label><input type="number" id="calNet" inputmode="decimal"></div>
+        <div class="field"><label for="calBase">Base package (optional)</label><input type="number" id="calBase" inputmode="decimal"></div>
+        <div class="field"><label for="calKpi">KPI bonus paid (optional)</label><input type="number" id="calKpi" inputmode="decimal"></div>
       </div>
-      <button class="btn cy" onclick="CNX.applyPayslip()">Apply to the app</button>
-      <p class="hint" id="calMsg">Fill any of the fields. Gross + net sets your real deduction %. Base sets the package. KPI sets the bonus.</p>
+      <button class="btn cy" onclick="CNX.applyPayslip()">Save payslip</button>
+      <p class="hint" id="calMsg">Gross + net saves the payslip and sets your real deduction %. Base sets the package. KPI sets the bonus.</p>
+      <h2 class="t" style="margin:14px 0 6px">Saved payslips</h2>
+      <div id="slipBox" class="list"></div>
     </details>
 
     <details class="card" id="secSched">
@@ -278,9 +299,10 @@ textarea{min-height:150px;font-family:ui-monospace,Menlo,monospace;font-size:12p
     </details>
 
     <details class="card" id="secData">
-      <summary><div>Data<small>Backup, transfer, export</small></div></summary>
+      <summary><div>Data<small>Backup, automatic copies, transfer</small></div></summary>
+      <div id="backupInfo" class="sub" style="margin-bottom:10px"></div>
       <div class="two" style="margin-bottom:8px">
-        <button class="btn" onclick="CNX.exportBackup()">Backup file</button>
+        <button class="btn primary" onclick="CNX.exportBackup()">Back up now</button>
         <button class="btn" onclick="document.getElementById('restoreFile').click()">Restore file</button>
       </div>
       <input type="file" id="restoreFile" accept="application/json" style="display:none" onchange="CNX.importFile(this)">
@@ -288,6 +310,7 @@ textarea{min-height:150px;font-family:ui-monospace,Menlo,monospace;font-size:12p
         <button class="btn" onclick="CNX.openTransfer()">Transfer to another device</button>
         <button class="btn" onclick="CNX.exportCSV()">Export CSV</button>
       </div>
+      <button class="btn" style="margin-bottom:8px" onclick="CNX.openSnaps()">Automatic copies (restore)</button>
       <button class="btn danger" onclick="CNX.clearAll()">Erase all shifts</button>
       <p class="hint">Everything is stored on this device only. Use Transfer to copy your data to your phone or PC as text.</p>
     </details>
@@ -312,8 +335,15 @@ textarea{min-height:150px;font-family:ui-monospace,Menlo,monospace;font-size:12p
 'use strict';
 
 /* ================= constants ================= */
-var APP_VERSION = '3.0.0';
+var APP_VERSION = '3.1.0';
 var CHANGELOG = [
+  { v: '3.1.0', d: '7 Nov 2026', items: [
+    'Earnings for any date range, this/last pay month, or all time.',
+    'Expected earnings by the end of the pay month or any future date, using your schedule, days off and holidays.',
+    'Payslip history: the app learns your real deductions and adjusts expected earnings from past payslips.',
+    'Pay month can start on any day (for example the 21st).',
+    'Automatic backup copies on this device, a warning with one-tap restore if saved data goes missing or unreadable, and backup reminders with share-to-Files.',
+    'Your data from 3.0.0 and earlier carries over untouched.' ] },
   { v: '3.0.0', d: '6 Nov 2026', items: [
     'Tracks your shift automatically from the schedule: no need to open the app on time.',
     'Rotating days off (any cycle length) and public holidays with a pay multiplier (default x2).',
@@ -356,7 +386,7 @@ function cd(ms) { var s = Math.max(0, Math.ceil(ms / 1000)); return pad(Math.flo
 function inTxt(ms) { var m = Math.max(0, Math.round(ms / MS)); if (m < 60) return m + ' min'; if (m < 1440) return Math.floor(m / 60) + 'h ' + (m % 60) + 'm'; return Math.floor(m / 1440) + 'd ' + Math.floor(m % 1440 / 60) + 'h'; }
 function dtl(ms) { var d = new Date(ms); return isoDay(d) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
 function safeJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
-function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
 function mondayISO(d) { var x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return isoDay(x); }
 function sod(ms) { var d = new Date(ms); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
 function rs(r) { return r.start || parseISO(r.iso).getTime(); }
@@ -370,16 +400,33 @@ function defaultSet() {
     sched: { start: '09:00', b1: '11:00', lunch: '13:00', b2: '16:00' },
     auto: true, confirmed: false, trackFrom: null,
     rot: { weeks: 2, anchor: mondayISO(new Date()), off: [[false,false,false,false,true,true,false],[false,false,false,false,true,true,false]] },
-    holidays: [], holidaysOff: []
+    holidays: [], holidaysOff: [], cutoff: 1
   };
 }
 var SET = defaultSet();
-var D = { live: null, records: [], over: {}, lastSeen: '' };
+var D = { live: null, records: [], over: {}, lastSeen: '', payslips: [], lastBackup: 0, backupSnooze: 0, hideRestore: false };
 var BH = 0, viewDate = new Date(), alerted = {}, audioCtx = null, curDay = null, lastSlow = 0, lastAuto = 0;
 viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
 
-function save() { store('cnx3_data', D); }
+var storeWarned = false, loadProblem = null, firstRun = false;
+function save() {
+  var ok = store('cnx3_data', D); store('cnx3_meta', { n: D.records.length, t: Date.now(), v: APP_VERSION });
+  if (!ok && !storeWarned) { storeWarned = true; notify('Could not save', 'Your browser refused to store data (storage full or blocked). Make a backup now.'); }
+  if (!loadProblem) maybeSnap(false);
+}
 function saveSet() { store('cnx3_settings', SET); }
+function snaps() { var l = safeJSON('cnx3_snaps'); return Array.isArray(l) ? l : []; }
+function snapFp() { return D.records.length + '|' + (D.payslips || []).length + '|' + Object.keys(D.over).length + '|' + JSON.stringify(SET).length; }
+function maybeSnap(force) {
+  if (!D.records.length) return;
+  var l = snaps(), t = Date.now(), last = l[0], fp = snapFp();
+  var need = force || !last || last.fp !== fp || t - last.t > 6 * 3600000;
+  if (!need) return;
+  var rec = { t: t, n: D.records.length, v: APP_VERSION, fp: fp, p: JSON.parse(snapshot()) };
+  if (last && !force && t - last.t < 600000) l[0] = rec; else l.unshift(rec);   // refresh the newest copy if it is under 10 min old
+  l = l.slice(0, 6);
+  if (!store('cnx3_snaps', l)) store('cnx3_snaps', l.slice(0, 2));
+}
 
 /* ---- load + migrate from v1/v2 ---- */
 function migrateSettings(o) {
@@ -412,15 +459,27 @@ function mergeSet(s) {
 }
 function mergeData(d) {
   D.live = d.live || null; D.records = Array.isArray(d.records) ? d.records : []; D.over = d.over || {}; D.lastSeen = d.lastSeen || '';
+  D.payslips = Array.isArray(d.payslips) ? d.payslips : []; D.lastBackup = d.lastBackup || 0; D.backupSnooze = d.backupSnooze || 0; D.hideRestore = !!d.hideRestore;
+}
+function readKey(k) {
+  var raw = null; try { raw = localStorage.getItem(k); } catch (e) {}
+  if (raw == null) return { raw: null, val: null };
+  try { return { raw: raw, val: JSON.parse(raw) }; } catch (e) { return { raw: raw, val: null, bad: true }; }
 }
 function load() {
-  var s3 = safeJSON('cnx3_settings'), d3 = safeJSON('cnx3_data');
-  if (s3) mergeSet(s3); else migrateSettings(safeJSON('cnx_settings'));
-  if (d3) mergeData(d3);
-  else {
-    var o = safeJSON('cnx_state');
-    if (o) migrateData(o);
+  var sr = readKey('cnx3_settings'), dr = readKey('cnx3_data'), s3 = sr.val, d3 = dr.val;
+  var old = safeJSON('cnx_state'), oldS = safeJSON('cnx_settings');
+  firstRun = !sr.raw && !dr.raw && !old && !oldS;
+  if (dr.bad) { try { localStorage.setItem('cnx3_data_corrupt', dr.raw); } catch (e) {} loadProblem = 'corrupt'; }
+  if (sr.bad) { try { localStorage.setItem('cnx3_settings_corrupt', sr.raw); } catch (e) {} loadProblem = loadProblem || 'corrupt'; }
+  if (s3) mergeSet(s3); else migrateSettings(oldS);
+  if (d3) mergeData(d3); else if (old) migrateData(old);
+  var meta = safeJSON('cnx3_meta');
+  if (!loadProblem) {
+    if (d3 && meta && typeof meta.n === 'number' && D.records.length < meta.n) loadProblem = 'lost';
+    else if (!d3 && !dr.bad && snaps().length) loadProblem = 'missing';
   }
+  if (loadProblem) firstRun = false;
 }
 
 /* ================= pay maths ================= */
@@ -591,7 +650,7 @@ function reminders(t) {
 CNXinit();
 function CNXinit() { window.CNX = {}; }
 var C = window.CNX;
-C._t = { get D() { return D; }, get SET() { return SET; }, payFor: payFor, dayInfo: dayInfo, timeline: timeline, logic: logic, get BH() { return BH; }, net: net, recalc: recalc, addRecord: addRecord, startLive: startLive, finish: finish, parseISO: parseISO };
+C._t = { get D() { return D; }, get SET() { return SET; }, payFor: payFor, dayInfo: dayInfo, timeline: timeline, logic: logic, get BH() { return BH; }, net: net, recalc: recalc, addRecord: addRecord, startLive: startLive, finish: finish, parseISO: parseISO, project: project, calibInfo: calibInfo, periodBounds: periodBounds, rangeStats: rangeStats, snaps: snaps };
 
 C.toggleClock = function () {
   ensureAudio();
@@ -775,9 +834,13 @@ function renderLive() {
   var S = schedStartMs(sod(t)), tl = S != null ? timeline(S) : null, proj;
   if (tl) proj = payFor(S, tl.end, tl.phases.filter(function (p) { return p.kind === 'lunch'; }).map(function (p) { return { s: p.s, e: p.e }; }), 1).gross; else proj = BH * PAID_H;
   $('shiftGoal').textContent = money(net(proj)) + ' EGP';
-  var d = new Date(), ms = monthStats(d.getFullYear(), d.getMonth());
-  $('monthNet').textContent = money(net(ms.gross)); $('monthGross').textContent = money(ms.gross); $('monthDays').textContent = ms.days + ' day' + (ms.days === 1 ? '' : 's') + ' worked';
+  var pb = periodBounds(new Date(t)), pr = project(pb.s, pb.e, t), gf = calibInfo().gf;
+  $('monthTitle').textContent = 'This pay period · ' + periodLabel(pb);
+  $('monthNet').textContent = money(net(pr.actual.gross)); $('monthGross').textContent = money(pr.actual.gross); $('monthDays').textContent = pr.actual.days + ' day' + (pr.actual.days === 1 ? '' : 's') + ' worked';
+  $('expLabel').textContent = 'Expected by ' + shortDate(pb.e); $('monthExp').textContent = money(net((pr.actual.gross + pr.fut) * gf)) + ' EGP';
   var n = '';
+  if (firstRun && !D.records.length && !D.live && !D.hideRestore) n += '<div class="card info"><div class="row between"><b>Used this app before?</b><button class="xbtn" aria-label="Dismiss" onclick="CNX.dismissRestore()">' + ic('x') + '</button></div><p class="sub" style="margin:4px 0 10px">If your data disappeared, restore it from a backup file or from pasted transfer text.</p><div class="two"><button class="btn sm cy" onclick="document.getElementById(\'restoreFile\').click()">Restore from file</button><button class="btn sm" onclick="CNX.openTransfer()">Paste transfer text</button></div></div>';
+  if (D.records.length >= 3 && (!D.lastBackup || t - D.lastBackup > 7 * 86400000) && t > (D.backupSnooze || 0)) n += '<div class="card warn"><b>Back up your data</b><p class="sub" style="margin:4px 0 10px">Last backup file: ' + ago(D.lastBackup) + '. A backup file is the only protection if the browser data is ever cleared.</p><div class="two"><button class="btn sm cy" onclick="CNX.exportBackup()">Back up now</button><button class="btn sm" onclick="CNX.snoozeBackup()">Remind me later</button></div></div>';
   if (!SET.confirmed) n += '<div class="card warn"><b>Automatic tracking is waiting.</b><p class="sub" style="margin:4px 0 10px">Check your real shift times and days off, then confirm. Until then nothing is recorded for you.</p><button class="btn sm cy" onclick="CNX.gotoSchedule()">Check my schedule</button></div>';
   if (D.lastSeen !== APP_VERSION) n += '<div class="card info"><div class="row between"><b>Updated to v' + APP_VERSION + '</b><button class="xbtn" onclick="CNX.dismissNew()">' + ic('x') + '</button></div><p class="sub" style="margin:4px 0 10px">Auto tracking, rotating days off, holidays, tappable calendar and more.</p><button class="btn sm cy" onclick="CNX.showChangelog()">What\'s new</button></div>';
   $('notices').innerHTML = n;
@@ -808,24 +871,182 @@ function renderCal() {
     return '<button class="item" onclick="CNX.openDay(\'' + r.iso + '\')"><div><b>' + parseISO(r.iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) + '</b><small>' + (r.legacy ? esc(r.duration) : tm(r.start) + ' – ' + tm(r.end) + ' · ' + fmtHM(r.secs)) + (r.mult > 1 ? ' · ×' + r.mult : '') + (r.auto ? ' · auto' : '') + '</small></div><div class="r"><b class="g mono">' + money(recNet(r)) + '</b><small class="mono">gross ' + money(r.gross) + '</small></div></button>';
   }).join('') : '<div class="empty">No shifts recorded this month.</div>';
 }
-function renderAll() { renderLive(); renderCal(); }
+function renderAll() { renderLive(); renderCal(); renderEarn(); }
+
+/* ================= earnings, projections, payslips ================= */
+function periodFromStart(st) {
+  var c = SET.cutoff || 1, e = new Date(st.getFullYear(), st.getMonth() + 1, c - 1);
+  return { s: isoDay(st), e: isoDay(e), key: st.getFullYear() + '-' + pad(st.getMonth() + 1) };
+}
+function periodBounds(date) {
+  var c = SET.cutoff || 1, y = date.getFullYear(), m = date.getMonth();
+  return periodFromStart(date.getDate() >= c ? new Date(y, m, c) : new Date(y, m - 1, c));
+}
+function periodByKey(key) { var q = key.split('-'); return periodFromStart(new Date(+q[0], +q[1] - 1, SET.cutoff || 1)); }
+function periodLabel(b) {
+  if ((SET.cutoff || 1) === 1) { var d = parseISO(b.s); return MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
+  var o = { day: 'numeric', month: 'short' };
+  return parseISO(b.s).toLocaleDateString('en-GB', o) + ' – ' + parseISO(b.e).toLocaleDateString('en-GB', o);
+}
+function shortDate(k) { return parseISO(k).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
+function rangeStats(f, t) {
+  var g = 0, secs = 0, days = {};
+  D.records.forEach(function (r) { if (r.iso >= f && r.iso <= t) { g += r.gross; secs += r.secs || 0; days[r.iso] = 1; } });
+  var L = D.live;
+  if (L && L.iso >= f && L.iso <= t) { var v = liveCalc(Date.now()); g += v.gross; secs += v.secs; days[L.iso] = 1; }
+  return { gross: g, secs: secs, days: Object.keys(days).length };
+}
+function lunchOnly(tl) { return tl.phases.filter(function (p) { return p.kind === 'lunch'; }).map(function (p) { return { s: p.s, e: p.e }; }); }
+function liveRemaining(t) {
+  var L = D.live; if (!L || !L.end) return 0;
+  var tl = timeline(L.anchor), lun = L.lunches.length ? L.lunches : (tl ? lunchOnly(tl) : []);
+  return Math.max(0, payFor(L.start, L.end, lun, L.mult).gross - liveCalc(t).gross);
+}
+function futureGross(d, t) {
+  var info = dayInfo(d), k = info.key, todayK = isoDay(new Date(t));
+  if (k < todayK || !info.work) return 0;
+  if (D.live && D.live.iso === k) return 0;
+  if (D.records.some(function (r) { return r.iso === k; })) return 0;
+  var S = schedStartMs(d); if (S == null) return 0;
+  var tl = timeline(S); if (!tl) return 0;
+  if (k === todayK && S <= t) return 0;
+  return payFor(S, tl.end, lunchOnly(tl), info.mult).gross;
+}
+function project(f, t, now) {
+  var st = rangeStats(f, t), todayK = isoDay(new Date(now)), fut = 0, left = 0, L = D.live;
+  if (L && L.end && L.iso >= f && L.iso <= t) fut += liveRemaining(now);
+  if (t >= todayK) {
+    var d = parseISO(f > todayK ? f : todayK), end = parseISO(t), cap = 0;
+    for (; d <= end && cap < 800; d.setDate(d.getDate() + 1), cap++) { var g = futureGross(d, now); if (g > 0) { fut += g; left++; } }
+  }
+  return { actual: st, fut: fut, left: left };
+}
+function schedDays(b) { var n = 0; for (var d = parseISO(b.s), e = parseISO(b.e); d <= e; d.setDate(d.getDate() + 1)) if (dayInfo(d).work) n++; return n; }
+function calibInfo() {
+  var ps = D.payslips || [], ag = 0, pg = 0, used = {}, n = 0;
+  ps.forEach(function (p) {
+    var b = periodByKey(p.m), st = rangeStats(b.s, b.e), sd = schedDays(b);
+    if (sd > 0 && st.gross > 0 && st.days >= 0.8 * sd) { ag += st.gross; pg += p.gross; used[p.m] = true; n++; }
+  });
+  return { gf: ag > 0 ? Math.min(1.5, Math.max(0.5, pg / ag)) : 1, used: used, n: n };
+}
+var earnRange = null;
+function earnPresetBounds(n) {
+  var cur = periodBounds(new Date());
+  if (n === 'cur') return { f: cur.s, t: cur.e };
+  if (n === 'prev') { var d = parseISO(cur.s); d.setDate(d.getDate() - 1); var p = periodBounds(d); return { f: p.s, t: p.e }; }
+  var first = D.records.reduce(function (m, r) { return r.iso < m ? r.iso : m; }, isoDay(new Date()));
+  return { f: first, t: isoDay(new Date()) };
+}
+function renderEarn() {
+  if (!earnRange) earnRange = earnPresetBounds('cur');
+  var r = earnRange, now = Date.now(), todayK = isoDay(new Date(now));
+  $('earnFrom').value = r.f; $('earnTo').value = r.t;
+  Array.prototype.forEach.call(document.querySelectorAll('#earnChips .pill'), function (b) { var q = earnPresetBounds(b.getAttribute('data-p')); b.className = 'pill' + (q.f === r.f && q.t === r.t ? ' on' : ''); });
+  var pr = project(r.f, r.t, now), ci = calibInfo(), a = pr.actual;
+  var h = '<div class="big" style="margin:10px 0 0"><span class="mono" style="font-size:30px;font-weight:800;color:#34d399">' + money(net(a.gross)) + '</span><span class="cur" style="font-size:14px">EGP net earned</span></div>' +
+    '<div class="sub">Gross <span class="mono">' + money(a.gross) + '</span> · ' + a.days + ' day' + (a.days === 1 ? '' : 's') + ' · ' + fmtHM(a.secs) + ' paid' + (a.days ? ' · avg net/day ' + money(net(a.gross) / a.days) : '') + '</div>';
+  if (r.t >= todayK) {
+    var tot = a.gross + pr.fut;
+    h += '<div class="kv"><span>Expected by ' + shortDate(r.t) + '</span><b class="mono">' + money(net(tot * ci.gf)) + ' EGP</b></div>' +
+      '<p class="hint">' + pr.left + ' working day' + (pr.left === 1 ? '' : 's') + ' still to come, from your schedule, days off and holidays. ' +
+      (ci.n ? 'Adjusted ×' + ci.gf.toFixed(3) + ' using ' + ci.n + ' past payslip' + (ci.n === 1 ? '' : 's') + '. Without adjustment: ' + money(net(tot)) + '.' : 'Add past payslips in Settings to make this more accurate.') + '</p>';
+  }
+  $('earnOut').innerHTML = h;
+}
+C.earnPreset = function (n) { earnRange = earnPresetBounds(n); renderEarn(); };
+C.earnCustom = function () {
+  var f = $('earnFrom').value, t = $('earnTo').value; if (!f || !t) return;
+  if (f > t) { var x = f; f = t; t = x; } earnRange = { f: f, t: t }; renderEarn();
+};
+function updateTaxFromSlips() {
+  var ps = (D.payslips || []).slice(0, 6), sg = 0, sn = 0; ps.forEach(function (p) { sg += p.gross; sn += p.net; });
+  if (sg > 0) SET.tax = Math.min(60, Math.max(0, +(100 * (1 - sn / sg)).toFixed(1)));
+}
+function renderPayslips() {
+  var box = $('slipBox'); if (!box) return; var ci = calibInfo(), ps = D.payslips || [];
+  box.innerHTML = ps.length ? ps.map(function (p) {
+    var b = periodByKey(p.m), ded = p.gross > 0 ? (100 * (1 - p.net / p.gross)).toFixed(1) : '0';
+    return '<div class="item"><div><b>' + esc(periodLabel(b)) + '</b><small>gross ' + money(p.gross) + ' · net ' + money(p.net) + ' · deductions ' + ded + '%<br>' + (ci.used[p.m] ? 'Used to adjust expected earnings' : 'Not used for projections (that period is not fully tracked in the app)') + '</small></div><button class="xbtn" aria-label="Delete" onclick="CNX.delSlip(\'' + p.m + '\')">' + ic('trash') + '</button></div>';
+  }).join('') : '<div class="empty" style="padding:6px 0">No payslips saved yet.</div>';
+}
+C.delSlip = function (m) {
+  if (!confirm('Delete this payslip?')) return;
+  D.payslips = D.payslips.filter(function (p) { return p.m !== m; }); updateTaxFromSlips(); save(); saveSet(); writeSettings(); renderAll();
+};
+C.applyPayslip = function () {
+  var per = $('calPeriod').value, base = parseFloat($('calBase').value), kpi = parseFloat($('calKpi').value), g = parseFloat($('calGross').value), n = parseFloat($('calNet').value), msg = [];
+  if (g > 0 && n > 0 && n <= g) {
+    if (!per) { alert('Choose which pay month this payslip is for.'); return; }
+    D.payslips = (D.payslips || []).filter(function (p) { return p.m !== per; }); D.payslips.push({ m: per, gross: g, net: n });
+    D.payslips.sort(function (a, b) { return a.m < b.m ? 1 : a.m > b.m ? -1 : 0; });
+    updateTaxFromSlips(); msg.push('payslip saved, deductions ' + SET.tax + '%');
+  }
+  if (base > 0) { SET.pkg = 'custom'; SET.customPkg = base; msg.push('base ' + base); }
+  if (!isNaN(kpi) && kpi >= 0) { SET.kpiAmount = kpi; if (kpi > 0) SET.probation = false; msg.push('KPI ' + kpi); }
+  $('calMsg').textContent = msg.length ? 'Applied: ' + msg.join(', ') + '.' : 'Nothing to apply. Fill gross and net, base, or KPI.';
+  save(); saveSet(); recalc(); writeSettings(); renderAll();
+};
+
+/* ================= automatic copies and backups ================= */
+function ago(ms) {
+  if (!ms) return 'never'; var d = Date.now() - ms;
+  if (d < 60000) return 'just now'; if (d < 3600000) return Math.floor(d / 60000) + ' min ago';
+  if (d < 86400000) return Math.floor(d / 3600000) + ' h ago'; return Math.floor(d / 86400000) + ' days ago';
+}
+function markBackup() { D.lastBackup = Date.now(); D.backupSnooze = 0; save(); updateBackupInfo(); renderLive(); }
+function updateBackupInfo() {
+  var el = $('backupInfo'); if (!el) return; var s = snaps();
+  el.textContent = 'Last backup file: ' + ago(D.lastBackup) + ' · Automatic copies on this device: ' + s.length + (s.length ? ' (newest ' + ago(s[0].t) + ')' : '');
+}
+C.exportBackup = function () {
+  var name = 'cnx_backup_' + isoDay(new Date()) + '.json', txt = snapshot();
+  try {
+    var f = new File([txt], name, { type: 'application/json' });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) { navigator.share({ files: [f], title: 'Shift Tracker backup' }).then(markBackup).catch(function () {}); return; }
+  } catch (e) {}
+  download(name, txt, 'application/json'); markBackup();
+};
+C.snoozeBackup = function () { D.backupSnooze = Date.now() + 2 * 86400000; save(); renderLive(); };
+C.dismissRestore = function () { D.hideRestore = true; save(); renderLive(); };
+function snapRows() {
+  var s = snaps(); if (!s.length) return '<div class="empty">No automatic copies yet. They are created as you log shifts.</div>';
+  return '<div class="list">' + s.map(function (x, i) {
+    return '<div class="item"><div><b>' + new Date(x.t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' ' + tm(x.t) + '</b><small>' + x.n + ' shift' + (x.n === 1 ? '' : 's') + ' · v' + esc(x.v) + '</small></div><button class="btn sm cy" onclick="CNX.restoreSnap(' + i + ')">Restore</button></div>';
+  }).join('') + '</div>';
+}
+C.openSnaps = function () {
+  openSheet('<div class="sheethead"><h3>Automatic copies</h3><button class="x" onclick="CNX.closeSheet()">' + ic('x') + '</button></div><p class="hint" style="margin:0 0 10px">The app keeps its own recent copies on this device. They protect against bad updates and corrupted saves. They do not survive clearing the browser data, so also keep a backup file.</p>' + snapRows());
+};
+C.restoreSnap = function (i) {
+  var sn = snaps()[i]; if (!sn) return;
+  if (!confirm('Replace your current data with this copy from ' + new Date(sn.t).toLocaleString('en-GB') + '?')) return;
+  var was = loadProblem; loadProblem = null; maybeSnap(true);
+  try { restore(JSON.stringify(sn.p)); C.closeSheet(); notify('Data restored', 'Restored the copy from ' + tm(sn.t) + '.'); } catch (e) { alert('That copy could not be restored.'); loadProblem = was; }
+};
+function showProblem() {
+  var kinds = { corrupt: 'Your saved data could not be read.', lost: 'Some of your saved shifts are missing since the last time you used the app.', missing: 'Your saved data is missing from this device.' };
+  openSheet('<div class="sheethead"><h3>Something is wrong with your data</h3><button class="x" onclick="CNX.keepGoing()">' + ic('x') + '</button></div><p class="sub" style="margin:0 0 10px">' + kinds[loadProblem] + ' The app kept automatic copies. Pick one to restore, or restore from a backup file.</p>' + snapRows() +
+    '<div class="two" style="margin-top:12px"><button class="btn" onclick="document.getElementById(\'restoreFile\').click()">Restore from file</button><button class="btn ghost" onclick="CNX.keepGoing()">Keep what I have</button></div>');
+}
+C.keepGoing = function () { loadProblem = null; C.closeSheet(); };
 
 /* ================= settings UI ================= */
 function writeSettings() {
   $('pkgSel').value = SET.pkg; $('customPkg').value = SET.customPkg || ''; $('customPkg').style.display = SET.pkg === 'custom' ? '' : 'none';
-  $('kpiAmount').value = SET.kpiAmount || 0; $('kpiAmount').disabled = SET.probation; $('taxInput').value = SET.tax; $('holMult').value = SET.holidayMult;
+  $('kpiAmount').value = SET.kpiAmount || 0; $('kpiAmount').disabled = SET.probation; $('taxInput').value = SET.tax; $('holMult').value = SET.holidayMult; $('cutoffIn').value = SET.cutoff || 1;
   $('nightAllow').value = SET.night; $('nightStart').value = SET.nightStart; $('nightEnd').value = SET.nightEnd; $('remindIn').value = SET.remind;
   $('schedStart').value = SET.sched.start || ''; $('schedB1').value = SET.sched.b1 || ''; $('schedLunch').value = SET.sched.lunch || ''; $('schedB2').value = SET.sched.b2 || '';
   $('autoChk').checked = !!SET.auto;
   var pb = $('probBtn'); pb.textContent = SET.probation ? 'Probation (KPI off)' : 'Post-probation (KPI on)'; pb.className = 'badge ' + (SET.probation ? 'on' : 'brk');
   $('presetNow').textContent = SET.preset || 'Custom';
   $('confirmBox').innerHTML = SET.confirmed ? '<span class="chip ok">Schedule confirmed' + (SET.trackFrom ? ' · tracking since ' + SET.trackFrom : '') + '</span>' : '<button class="btn primary" onclick="CNX.confirmSchedule()">Confirm my schedule and start tracking</button>';
-  renderPresets();
+  renderPresets(); renderPayslips(); updateBackupInfo();
 }
 C.readSettings = function () {
   function num(id, d, lo, hi) { var v = parseFloat($(id).value); return isNaN(v) ? d : Math.min(hi, Math.max(lo, v)); }
   SET.pkg = $('pkgSel').value; SET.customPkg = num('customPkg', 0, 0, 1e6); SET.kpiAmount = num('kpiAmount', 0, 0, 1e6);
-  SET.tax = num('taxInput', 15, 0, 60); SET.holidayMult = num('holMult', 2, 1, 5); SET.night = num('nightAllow', 6.85, 0, 1000);
+  SET.tax = num('taxInput', 15, 0, 60); SET.holidayMult = num('holMult', 2, 1, 5); SET.cutoff = Math.round(num('cutoffIn', 1, 1, 28)); SET.night = num('nightAllow', 6.85, 0, 1000);
   SET.nightStart = Math.round(num('nightStart', 18, 0, 23)); SET.nightEnd = Math.round(num('nightEnd', 6, 0, 23)); SET.remind = Math.round(num('remindIn', 7, 1, 30));
   SET.sched = { start: $('schedStart').value, b1: $('schedB1').value, lunch: $('schedLunch').value, b2: $('schedB2').value };
   $('customPkg').style.display = SET.pkg === 'custom' ? '' : 'none';
@@ -843,14 +1064,6 @@ C.confirmSchedule = function () {
   notify('Schedule confirmed', 'Shifts are now tracked automatically from today.');
 };
 C.gotoSchedule = function () { C.tab('set'); var s = $('secSched'); s.open = true; $('secRot').open = true; s.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
-C.applyPayslip = function () {
-  var base = parseFloat($('calBase').value), kpi = parseFloat($('calKpi').value), g = parseFloat($('calGross').value), n = parseFloat($('calNet').value), msg = [];
-  if (g > 0 && n > 0 && n <= g) { SET.tax = +(((g - n) / g) * 100).toFixed(1); msg.push('deductions ' + SET.tax + '%'); }
-  if (base > 0) { SET.pkg = 'custom'; SET.customPkg = base; msg.push('base ' + base); }
-  if (!isNaN(kpi) && kpi >= 0) { SET.kpiAmount = kpi; if (kpi > 0) SET.probation = false; msg.push('KPI ' + kpi); }
-  $('calMsg').textContent = msg.length ? 'Applied: ' + msg.join(', ') + '.' : 'Nothing to apply. Fill gross and net, base, or KPI.';
-  saveSet(); recalc(); writeSettings(); renderAll();
-};
 function renderRot() {
   var R = SET.rot, h = '<div class="grid2"><div class="field"><label for="rotWeeks">Cycle length</label><select id="rotWeeks" onchange="CNX.setRotWeeks(this.value)">';
   for (var i = 1; i <= 6; i++) h += '<option value="' + i + '"' + (R.weeks === i ? ' selected' : '') + '>' + i + ' week' + (i > 1 ? 's' : '') + '</option>';
@@ -956,9 +1169,8 @@ function restore(txt) {
   } else if (j.app === 'cnx-shift-visualizer' && j.data) {
     D.records = []; D.live = null; D.over = {}; migrateData(j.data); migrateSettings(j.data.settings);
   } else throw new Error('bad');
-  saveSet(); save(); recalc(); writeSettings(); renderRot(); renderAll();
+  loadProblem = null; saveSet(); save(); recalc(); writeSettings(); renderRot(); renderAll();
 }
-C.exportBackup = function () { download('cnx_backup_' + isoDay(new Date()) + '.json', snapshot(), 'application/json'); };
 C.importFile = function (input) {
   var f = input.files && input.files[0]; if (!f) return; var r = new FileReader();
   r.onload = function () { try { if (!confirm('Replace the data on this device with this backup?')) return; restore(r.result); alert('Backup restored.'); } catch (e) { alert('That file is not a valid backup.'); } input.value = ''; };
@@ -969,7 +1181,7 @@ C.openTransfer = function () {
     '<p class="hint" style="margin-bottom:8px">On this device: tap Copy and send the text to yourself. On the other device: open this screen, paste the text over the box and tap Import.</p>' +
     '<textarea id="xferText" spellcheck="false">' + esc(snapshot()) + '</textarea><div class="two" style="margin-top:10px"><button class="btn" onclick="CNX.copyXfer()">Copy</button><button class="btn primary" onclick="CNX.importXfer()">Import</button></div>');
 };
-C.copyXfer = function () { var t = $('xferText'); t.select(); try { if (navigator.clipboard) navigator.clipboard.writeText(t.value); else document.execCommand('copy'); alert('Copied.'); } catch (e) {} };
+C.copyXfer = function () { var t = $('xferText'); t.select(); try { if (navigator.clipboard) navigator.clipboard.writeText(t.value); else document.execCommand('copy'); alert('Copied.'); markBackup(); } catch (e) {} };
 C.importXfer = function () { try { if (!confirm('Replace the data on this device with the pasted data?')) return; restore($('xferText').value); C.closeSheet(); alert('Imported.'); } catch (e) { alert('That text is not valid app data.'); } };
 C.exportCSV = function () {
   function q(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
@@ -978,7 +1190,7 @@ C.exportCSV = function () {
   download('cnx_shift_history.csv', csv, 'text/csv;charset=utf-8');
 };
 C.clearAll = function () {
-  if (!confirm('Erase ALL recorded shifts on this device? Settings are kept.')) return;
+  if (!confirm('Erase ALL recorded shifts on this device? Settings and automatic copies are kept.')) return;
   D.records = []; D.live = null; D.over = {}; save(); renderAll();
 };
 
@@ -986,7 +1198,7 @@ C.clearAll = function () {
 C.tab = function (n) {
   ['live', 'cal', 'set'].forEach(function (x) { $('tab-' + x).classList.toggle('on', x === n); $('nav-' + x).classList.toggle('on', x === n); });
   try { localStorage.setItem('cnx3_tab', n); } catch (e) {}
-  window.scrollTo(0, 0); if (n === 'cal') renderCal();
+  window.scrollTo(0, 0); if (n === 'cal') { renderCal(); renderEarn(); }
 };
 C.month = function (d) { viewDate = d === 0 ? new Date(new Date().getFullYear(), new Date().getMonth(), 1) : new Date(viewDate.getFullYear(), viewDate.getMonth() + d, 1); renderCal(); };
 C.dismissNew = function () { D.lastSeen = APP_VERSION; save(); renderLive(); };
@@ -1004,10 +1216,14 @@ function init() {
   load(); recalc();
   $('verBtn').textContent = 'v' + APP_VERSION; $('aboutVer').textContent = 'Version ' + APP_VERSION; $('changelog').innerHTML = changelogHTML();
   writeSettings(); renderRot();
+  var pb0 = periodBounds(new Date()), pd = parseISO(pb0.s); pd.setMonth(pd.getMonth() - 1); $('calPeriod').value = pd.getFullYear() + '-' + pad(pd.getMonth() + 1);
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
   if ('Notification' in window && Notification.permission === 'granted') $('alertsBtn').textContent = 'Notifications on';
   document.addEventListener('click', ensureAudio, { once: true });
   var tab = 'live'; try { tab = localStorage.getItem('cnx3_tab') || 'live'; } catch (e) {} if (['live', 'cal', 'set'].indexOf(tab) < 0) tab = 'live';
+  if (!loadProblem) maybeSnap(false);
   logic(Date.now(), true); renderAll(); C.tab(tab);
+  if (loadProblem) showProblem();
   setInterval(function () {
     var t = Date.now(); paint(t);
     if (t - lastSlow >= 1000) { lastSlow = t; logic(t, false); if (D.live || $('nextEventText').textContent === '') $('nextEventText').textContent = nextText(t); }
